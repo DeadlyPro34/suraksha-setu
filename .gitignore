@@ -1,0 +1,11 @@
+.gitignore
+node_modules/
+.next/
+.env
+.env.local
+.DS_Store
+/dist/
+__pycache__/
+*.pyc
+backend/venv/
+.venv/

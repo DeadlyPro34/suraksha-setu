@@ -4,3 +4,4 @@ pydantic-settings
 sqlalchemy
 alembic
 psycopg2-binary
+geoalchemy2
