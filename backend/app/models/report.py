@@ -27,7 +27,8 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = pk_uuid()
-    reporter_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # Reports can be submitted before citizen authentication is implemented.
+    reporter_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     type = Column(Enum(ReportType, name="report_type"), nullable=False)
     description = Column(Text, nullable=False)
     location = Column(Geometry("POINT", srid=4326), nullable=False)
