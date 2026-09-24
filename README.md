@@ -14,9 +14,9 @@ venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 # Run the FastAPI server
-python -m uvicorn app.main:app --reload --port 5000
+python -m uvicorn app.main:app --reload --port 8000
 ```
-The backend API will run on `http://localhost:5000`.
+The backend API will run on `http://localhost:8000`.
 
 ### Frontend (Next.js)
 Navigate to the `frontend` folder and start the web app:
@@ -27,10 +27,7 @@ npm install --legacy-peer-deps
 # Start the development server
 npm run dev
 ```
-The frontend application will run on `http://localhost:3000` (or `3001` if `3000` is busy). Make sure to create a `.env.local` file in the `frontend/` directory with:
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
+The frontend application will run on `http://localhost:3000` (or `3001` if `3000` is busy). Its API proxy defaults to `http://localhost:8000`; set `BACKEND_INTERNAL_URL` in `frontend/.env.local` only if the backend uses a different address.
 
 ---
 
