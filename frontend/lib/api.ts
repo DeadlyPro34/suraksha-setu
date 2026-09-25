@@ -45,3 +45,16 @@ export const runPipeline = async (incidentId: string): Promise<ResponsePlan> => 
 export const checkHealth = async () => {
   return fetchApi('/health');
 };
+
+export const submitDecision = async (
+  planId: string,
+  decision: "approved" | "rejected" | "modified",
+  notes?: string,
+  modifiedSummary?: string,
+) => {
+  return fetchApi(`/api/response-plans/${planId}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, notes, modified_summary: modifiedSummary }),
+  });
+};

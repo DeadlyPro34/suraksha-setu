@@ -26,6 +26,8 @@ export interface Shelter {
 export interface Resource {}
 
 export interface ResponsePlan {
+  id?: string;
+  status?: string;
   priority_score: number;
   summary: string;
   raw_agent_outputs: {
@@ -46,4 +48,20 @@ export interface Alert {
   message: string;
   language: string;
   sent_at: string | null;
+}
+
+export interface Assignment {
+  id: string;
+  incidentId: string;
+  title: string;
+  priority: string;
+  location: string;
+  eta: string;
+  status: string;
+}
+
+export interface ResourceRequest {
+  type: string;
+  quantity: number;
+  incidentId: string;
 }

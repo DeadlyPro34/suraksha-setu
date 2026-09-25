@@ -32,6 +32,7 @@ class Approval(Base):
         Enum(ApprovalDecision, name="approval_decision"), nullable=False
     )
     notes = Column(Text, nullable=True)
+    modified_summary = Column(Text, nullable=True)
     decided_at = Column(DateTime(timezone=True), nullable=False)
 
     # --- relationships ---

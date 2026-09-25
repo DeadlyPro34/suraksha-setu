@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { checkHealth, getAlerts, getReports, getShelters, runPipeline } from "@/lib/api";
+import { checkHealth, getAlerts, getReports, getShelters, runPipeline, submitDecision } from "@/lib/api";
 import { Alert, Report, ResponsePlan, Shelter } from "@/lib/types";
 
 /* ── Agent metadata ── */
@@ -86,6 +86,7 @@ export default function OfficialDashboard() {
     if (!incidentId.trim()) return;
     setLoading(true);
     setError(null);
+    setDecisionTime(null);
     try {
       const result = await runPipeline(incidentId.trim());
       setPlan(result);
@@ -94,6 +95,25 @@ export default function OfficialDashboard() {
       setError(err.message || "Pipeline failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [decisionTime, setDecisionTime] = useState<string | null>(null);
+
+  const handleSubmitDecision = async (decision: "approved" | "rejected" | "modified") => {
+    if (!plan?.id) return;
+    let modifiedSummary: string | undefined;
+    if (decision === "modified") {
+      const enteredSummary = window.prompt("Describe the changes made to this response plan:");
+      if (enteredSummary === null || !enteredSummary.trim()) return;
+      modifiedSummary = enteredSummary.trim();
+    }
+    try {
+      await submitDecision(plan.id, decision, undefined, modifiedSummary);
+      setPlan({ ...plan, status: decision });
+      setDecisionTime(new Date().toLocaleTimeString());
+    } catch (err: any) {
+      setError(err.message || "Failed to submit decision");
     }
   };
 
@@ -314,8 +334,18 @@ export default function OfficialDashboard() {
                     </div>
                     <p className="text-sm text-slate-700 leading-relaxed mb-5">{plan.summary}</p>
 
-                    <div className="border-t border-slate-100 pt-4">
-                      <p className="text-xs text-slate-500">Approval actions are not connected to the backend yet.</p>
+                    <div className="border-t border-slate-100 pt-4 flex gap-3">
+                      {plan.status === "pending_approval" || !plan.status ? (
+                        <>
+                          <button onClick={() => handleSubmitDecision("approved")} className="px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700">Approve</button>
+                          <button onClick={() => handleSubmitDecision("modified")} className="px-4 py-2 bg-amber-500 text-white rounded font-medium hover:bg-amber-600">Modify</button>
+                          <button onClick={() => handleSubmitDecision("rejected")} className="px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700">Reject</button>
+                        </>
+                      ) : (
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded text-sm text-slate-700 font-medium">
+                          Decision recorded: {plan.status} {decisionTime ? `at ${decisionTime}` : ""}
+                        </div>
+                      )}
                     </div>
                   </div>
 
