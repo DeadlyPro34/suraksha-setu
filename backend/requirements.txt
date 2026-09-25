@@ -5,3 +5,6 @@ sqlalchemy
 alembic
 psycopg2-binary
 geoalchemy2
+httpx
+groq
+shapely
