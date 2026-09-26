@@ -1,5 +1,8 @@
 import './globals.css'
 import { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Suraksha Setu — Disaster Response AI',
@@ -12,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      <body className={`min-h-screen bg-slate-50 text-slate-900 antialiased ${inter.className}`}>
         {children}
       </body>
     </html>

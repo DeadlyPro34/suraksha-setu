@@ -109,7 +109,7 @@ export default function CitizenHome() {
         </div>
 
         {/* ── Recent alerts from database ── */}
-        <div>
+        <div id="alerts">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Recent Alerts</h3>
           <div className="space-y-2">
             {loading && <div role="status" className="card p-4 text-sm text-slate-500">Loading alerts…</div>}

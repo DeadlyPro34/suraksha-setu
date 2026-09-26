@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { getShelters } from "@/lib/api";
 import { Shelter } from "@/lib/types";
 
@@ -45,7 +46,7 @@ export default function SheltersPage() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <a href="/" className="text-slate-400 hover:text-slate-600 transition-colors">← Back</a>
+          <Link href="/" className="text-slate-400 hover:text-slate-600 transition-colors">← Back</Link>
           <h1 className="text-lg font-bold text-slate-900">Nearest Safe Shelters</h1>
         </div>
       </header>

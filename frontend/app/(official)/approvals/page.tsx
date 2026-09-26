@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function ApprovalsPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -20,7 +22,7 @@ export default function ApprovalsPage() {
             { icon: "🚨", label: "Incidents", href: "/incidents" },
             { icon: "✅", label: "Approvals", active: true },
           ].map((item) => (
-            <a
+            <Link
               key={item.label}
               href={"href" in item ? item.href : "#"}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
@@ -31,7 +33,7 @@ export default function ApprovalsPage() {
             >
               <span>{item.icon}</span>
               <span>{item.label}</span>
-            </a>
+            </Link>
           ))}
         </nav>
       </aside>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { getReports } from "@/lib/api";
 import { Report } from "@/lib/types";
 
@@ -46,7 +47,7 @@ export default function IncidentsPage() {
             { icon: "🚨", label: "Incidents", active: true },
             { icon: "✅", label: "Approvals", href: "/approvals" },
           ].map((item) => (
-            <a
+            <Link
               key={item.label}
               href={"href" in item ? item.href : "#"}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
@@ -57,7 +58,7 @@ export default function IncidentsPage() {
             >
               <span>{item.icon}</span>
               <span>{item.label}</span>
-            </a>
+            </Link>
           ))}
         </nav>
       </aside>

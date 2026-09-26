@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { checkHealth, getAlerts, getReports, getShelters, getResponsePlanActions, runPipeline, submitDecision } from "@/lib/api";
 import { Alert, Report, ResponsePlan, ResponsePlanActions, Shelter } from "@/lib/types";
 
@@ -101,14 +102,15 @@ export default function OfficialDashboard() {
   };
 
   const [decisionTime, setDecisionTime] = useState<string | null>(null);
+  const [isModifying, setIsModifying] = useState(false);
+  const [modifiedSummaryText, setModifiedSummaryText] = useState("");
 
-  const handleSubmitDecision = async (decision: "approved" | "rejected" | "modified") => {
+  const handleSubmitDecision = async (decision: "approved" | "rejected" | "modified", summary?: string) => {
     if (!plan?.id) return;
     let modifiedSummary: string | undefined;
     if (decision === "modified") {
-      const enteredSummary = window.prompt("Describe the changes made to this response plan:");
-      if (enteredSummary === null || !enteredSummary.trim()) return;
-      modifiedSummary = enteredSummary.trim();
+      if (!summary?.trim()) return;
+      modifiedSummary = summary.trim();
     }
     try {
       await submitDecision(plan.id, decision, undefined, modifiedSummary);
@@ -350,7 +352,23 @@ export default function OfficialDashboard() {
                       {plan.status === "pending_approval" || !plan.status ? (
                         <>
                           <button onClick={() => handleSubmitDecision("approved")} className="px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700">Approve</button>
-                          <button onClick={() => handleSubmitDecision("modified")} className="px-4 py-2 bg-amber-500 text-white rounded font-medium hover:bg-amber-600">Modify</button>
+                          {isModifying ? (
+                            <div className="w-full flex gap-2">
+                              <textarea
+                                value={modifiedSummaryText}
+                                onChange={(e) => setModifiedSummaryText(e.target.value)}
+                                placeholder="Describe the changes made to this response plan..."
+                                className="w-full p-2 border border-slate-200 rounded text-sm"
+                                rows={2}
+                              />
+                              <div className="flex flex-col gap-2">
+                                <button onClick={() => { handleSubmitDecision("modified", modifiedSummaryText); setIsModifying(false); setModifiedSummaryText(""); }} disabled={!modifiedSummaryText.trim()} className="px-3 py-1 bg-amber-500 text-white rounded text-sm hover:bg-amber-600 disabled:opacity-50">Submit</button>
+                                <button onClick={() => { setIsModifying(false); setModifiedSummaryText(""); }} className="px-3 py-1 bg-slate-200 text-slate-700 rounded text-sm hover:bg-slate-300">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => setIsModifying(true)} className="px-4 py-2 bg-amber-500 text-white rounded font-medium hover:bg-amber-600">Modify</button>
+                          )}
                           <button onClick={() => handleSubmitDecision("rejected")} className="px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700">Reject</button>
                         </>
                       ) : (

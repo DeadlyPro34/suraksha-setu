@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createReport } from "@/lib/api";
 import { Report } from "@/lib/types";
 
@@ -72,9 +73,9 @@ export default function ReportIncident() {
             <p className="text-xs text-blue-700">📍 Location: {lat}, {lon}</p>
             <p className="text-xs text-blue-700 mt-1">📝 Type: {type.replace("_", " ")}</p>
           </div>
-          <a href="/" className="inline-block px-6 py-2.5 gradient-primary text-white font-medium rounded-xl hover:opacity-90 transition-opacity">
+          <Link href="/" className="inline-block px-6 py-2.5 gradient-primary text-white font-medium rounded-xl hover:opacity-90 transition-opacity">
             Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -85,9 +86,9 @@ export default function ReportIncident() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <a href="/" className="text-slate-400 hover:text-slate-600 transition-colors">
+          <Link href="/" className="text-slate-400 hover:text-slate-600 transition-colors">
             ← Back
-          </a>
+          </Link>
           <h1 className="text-lg font-bold text-slate-900">Report Incident</h1>
         </div>
       </header>
