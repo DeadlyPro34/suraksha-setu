@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { checkHealth, getAlerts, getReports, getShelters, runPipeline, submitDecision } from "@/lib/api";
-import { Alert, Report, ResponsePlan, Shelter } from "@/lib/types";
+import { checkHealth, getAlerts, getReports, getShelters, getResponsePlanActions, runPipeline, submitDecision } from "@/lib/api";
+import { Alert, Report, ResponsePlan, ResponsePlanActions, Shelter } from "@/lib/types";
 
 /* ── Agent metadata ── */
 const AGENT_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -34,6 +34,7 @@ export default function OfficialDashboard() {
   const [health, setHealth] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const [incidentId, setIncidentId] = useState("");
   const [plan, setPlan] = useState<ResponsePlan | null>(null);
+  const [planActions, setPlanActions] = useState<ResponsePlanActions | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "pipeline">("overview");
@@ -87,6 +88,7 @@ export default function OfficialDashboard() {
     setLoading(true);
     setError(null);
     setDecisionTime(null);
+    setPlanActions(null);
     try {
       const result = await runPipeline(incidentId.trim());
       setPlan(result);
@@ -112,6 +114,16 @@ export default function OfficialDashboard() {
       await submitDecision(plan.id, decision, undefined, modifiedSummary);
       setPlan({ ...plan, status: decision });
       setDecisionTime(new Date().toLocaleTimeString());
+      if (decision === "approved") {
+        try {
+          const actions = await getResponsePlanActions(plan.id);
+          setPlanActions(actions);
+        } catch (actionError: any) {
+          setError(`Decision recorded, but action records could not be loaded: ${actionError.message || "request failed"}`);
+        }
+      } else {
+        setPlanActions(null);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to submit decision");
     }
@@ -348,6 +360,29 @@ export default function OfficialDashboard() {
                       )}
                     </div>
                   </div>
+
+                  {plan.status === "approved" && planActions && (
+                    <section aria-live="polite" className="card p-6 border border-green-200 bg-green-50">
+                      <h3 className="text-lg font-bold text-green-900">Simulated Actions Sent</h3>
+                      <p className="mt-1 text-sm text-green-800">
+                        {planActions.alerts.length} alerts sent to citizens, {planActions.dispatches.length} dispatch instructions sent to field teams.
+                      </p>
+                      <div className="mt-4 space-y-3">
+                        {planActions.alerts.map((alert) => (
+                          <div key={alert.id} className="rounded-lg border border-green-200 bg-white p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-green-800">Citizen alert · {alert.type}</p>
+                            <p className="mt-1 text-sm text-slate-800">{alert.message}</p>
+                          </div>
+                        ))}
+                        {planActions.dispatches.map((dispatch) => (
+                          <div key={dispatch.id} className="rounded-lg border border-blue-200 bg-white p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Dispatch · {humanize(dispatch.target_role)} · {dispatch.status}</p>
+                            <p className="mt-1 text-sm text-slate-800">{dispatch.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
                   {/* Agent output cards */}
                   <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Agent Outputs</h3>

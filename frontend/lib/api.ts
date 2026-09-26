@@ -1,4 +1,4 @@
-import { Alert, Report, ResponsePlan, Shelter } from "./types";
+import { Alert, Report, ResponsePlan, ResponsePlanActions, Shelter } from "./types";
 
 export const fetchApi = async (path: string, options?: RequestInit) => {
   // Keep browser requests same-origin; Next.js proxies /_api to the backend.
@@ -58,3 +58,6 @@ export const submitDecision = async (
     body: JSON.stringify({ decision, notes, modified_summary: modifiedSummary }),
   });
 };
+
+export const getResponsePlanActions = (planId: string) =>
+  fetchApi(`/api/response-plans/${planId}/actions`) as Promise<ResponsePlanActions>;

@@ -50,6 +50,20 @@ export interface Alert {
   sent_at: string | null;
 }
 
+export interface Dispatch {
+  id: string;
+  response_plan_id: string;
+  target_role: "field_officer" | "volunteer" | "official";
+  message: string;
+  status: "pending" | "sent" | "acknowledged";
+  dispatched_at: string | null;
+}
+
+export interface ResponsePlanActions {
+  alerts: Alert[];
+  dispatches: Dispatch[];
+}
+
 export interface Assignment {
   id: string;
   incidentId: string;
