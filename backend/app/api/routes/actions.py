@@ -9,11 +9,34 @@ from app.db.session import get_db
 from app.models.alert import Alert
 from app.models.dispatch import Dispatch
 from app.models.response_plan import ResponsePlan
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
+
+class AlertActionOut(BaseModel):
+    id: str
+    incident_id: str
+    type: str
+    message: str
+    language: str
+    sent_at: Optional[datetime]
+
+class DispatchActionOut(BaseModel):
+    id: str
+    response_plan_id: str
+    target_role: str
+    message: str
+    status: str
+    dispatched_at: Optional[datetime]
+
+class ResponsePlanActionsOut(BaseModel):
+    alerts: List[AlertActionOut]
+    dispatches: List[DispatchActionOut]
 
 router = APIRouter(prefix="/api/response-plans", tags=["actions"])
 
 
-@router.get("/{plan_id}/actions")
+@router.get("/{plan_id}/actions", response_model=ResponsePlanActionsOut)
 def get_plan_actions(plan_id: UUID, db: Session = Depends(get_db)):
     plan = db.query(ResponsePlan).filter(ResponsePlan.id == plan_id).first()
     if plan is None:

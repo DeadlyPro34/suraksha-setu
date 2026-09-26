@@ -1,19 +1,34 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.approval import ApprovalCreate, ApprovalOut
 from app.models.approval import Approval, ApprovalDecision
 from app.models.response_plan import ResponsePlan, PlanStatus
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services.notifications.action_service import trigger_action
 
 router = APIRouter(prefix="/api/response-plans", tags=["approvals"])
 
-# A mock user UUID for now
-MOCK_USER_ID = "00000000-0000-0000-0000-000000000001"
 MOCK_USER_PHONE = "0000000000"
+
+
+def _get_or_create_mock_user(db: Session) -> User:
+    """Return the deterministic mock official used until auth is wired in."""
+    user = db.query(User).filter(User.phone == MOCK_USER_PHONE).first()
+    if user is not None:
+        return user
+
+    user = User(
+        name="Mock Official",
+        phone=MOCK_USER_PHONE,
+        role=UserRole.official,
+        password_hash="mock-only-no-login",
+    )
+    db.add(user)
+    db.flush()
+    return user
 
 @router.post("/{plan_id}/decision", response_model=ApprovalOut)
 def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depends(get_db)):
@@ -35,21 +50,8 @@ def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depe
             detail="modified_summary is required for a modified decision",
         )
 
-    # Ensure mock user exists to prevent FK violation
-    user = db.query(User).filter(User.phone == MOCK_USER_PHONE).first()
-    if not user:
-        user = db.query(User).filter(User.id == MOCK_USER_ID).first()
-    if not user:
-        user = User(
-            id=uuid.UUID(MOCK_USER_ID),
-            name="Mock Approver",
-            phone=MOCK_USER_PHONE,
-            email="mock@example.com",
-            password_hash="mock",
-            role="official",
-        )
-        db.add(user)
-        db.flush()
+    # TODO: Remove when auth is implemented
+    user = _get_or_create_mock_user(db)
 
     approval = (
         db.query(Approval)
@@ -61,7 +63,7 @@ def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depe
         approval.decision = ApprovalDecision(data.decision)
         approval.notes = data.notes
         approval.modified_summary = modified_summary or None
-        approval.decided_at = datetime.utcnow()
+        approval.decided_at = datetime.now(timezone.utc)
     else:
         approval = Approval(
             id=uuid.uuid4(),
@@ -70,7 +72,7 @@ def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depe
             decision=ApprovalDecision(data.decision),
             notes=data.notes,
             modified_summary=modified_summary or None,
-            decided_at=datetime.utcnow(),
+            decided_at=datetime.now(timezone.utc),
         )
         db.add(approval)
 

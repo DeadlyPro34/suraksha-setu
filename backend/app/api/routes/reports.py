@@ -58,7 +58,7 @@ def create_report(report_in: ReportCreate, db: Session = Depends(get_db)):
         db.refresh(db_report)
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to create report. Please try again.")
         
     return _report_out(db_report)
 

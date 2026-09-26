@@ -1,12 +1,7 @@
-"""
-Flood-analysis agent (REAL).
+"""Analyze forecast precipitation for an incident location."""
 
-Ingests OpenWeatherMap API data for the incident location and uses an LLM
-to assess the flood severity and flooded percentage.
-"""
-
-import httpx
 import json
+import logging
 from typing import Any, Dict
 from groq import Groq
 from geoalchemy2.shape import to_shape
@@ -15,13 +10,17 @@ from app.agents.base import BaseAgent
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.report import Report
+from app.services.ingestion.weather_service import get_precipitation_forecast
+
+
+logger = logging.getLogger(__name__)
 
 class FloodAgent(BaseAgent):
     name = "flood_agent"
 
     def run(self, incident_id: str) -> Dict[str, Any]:
         # Lookup actual coordinates from DB using incident_id.
-        lat, lon = 19.0760, 72.8777 # Fallback defaults
+        lat, lon = 19.0760, 72.8777  # Mumbai fallback coordinates
         
         try:
             with SessionLocal() as db:
@@ -29,27 +28,16 @@ class FloodAgent(BaseAgent):
                 if report and report.location:
                     shape = to_shape(report.location)
                     lat, lon = shape.y, shape.x
-        except Exception as e:
-            print(f"Error fetching report coordinates: {e}")
-            
-        weather_data = None
-        if settings.OPENWEATHER_API_KEY:
-            try:
-                url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={settings.OPENWEATHER_API_KEY}&units=metric"
-                resp = httpx.get(url, timeout=10.0)
-                resp.raise_for_status()
-                weather_data = resp.json()
-            except Exception as e:
-                print(f"Error fetching weather: {e}")
-        
-        # If API key is missing or call failed, fallback to mocked data
-        if not weather_data:
-            weather_data = {
-                "coord": {"lat": lat, "lon": lon},
-                "weather": [{"main": "Rain", "description": "heavy intensity rain"}],
-                "main": {"temp": 28.5, "humidity": 95},
-                "rain": {"1h": 12.5}
-            }
+                else:
+                    from app.models.incident import Incident
+                    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+                    if incident and incident.location:
+                        shape = to_shape(incident.location)
+                        lat, lon = shape.y, shape.x
+        except Exception as exc:
+            logger.info("Could not load incident coordinates; using Mumbai defaults (%s)", type(exc).__name__)
+
+        weather_data = get_precipitation_forecast(lat, lon)
 
         # Default fallback values
         severity = "high"
@@ -59,15 +47,17 @@ class FloodAgent(BaseAgent):
             try:
                 client = Groq(api_key=settings.GROQ_API_KEY)
                 prompt = f"""
-                You are a flood severity analysis agent. Based on the following real-time weather data for the incident location (lat {lat}, lon {lon}), estimate the current flood severity and flooded percentage.
-                Weather data: {json.dumps(weather_data)}
+                You are a flood severity analysis agent. Based on this Open-Meteo
+                precipitation forecast for the incident location (lat {lat}, lon {lon}),
+                estimate flood severity and flooded percentage. Do not claim flood extent
+                is directly measured by precipitation. Forecast data: {json.dumps(weather_data)}
                 
                 Return EXACTLY a JSON object in this format (no other text):
                 {{"severity": "low|medium|high|critical", "flooded_pct": <number 0-100>}}
                 """
                 chat_completion = client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
-                    model="llama3-8b-8192", # Fast and capable
+                    model="llama-3.1-8b-instant",  # Existing flood-analysis model
                     response_format={"type": "json_object"}
                 )
                 
@@ -76,8 +66,8 @@ class FloodAgent(BaseAgent):
                 result = json.loads(result_str)
                 severity = result.get("severity", severity)
                 flooded_pct = result.get("flooded_pct", flooded_pct)
-            except Exception as e:
-                print(f"Error calling LLM: {e}")
+            except Exception as exc:
+                logger.info("Flood severity LLM unavailable; using default assessment (%s)", type(exc).__name__)
                 
         return {
             "severity": severity,

@@ -9,13 +9,14 @@ Agent findings remain mocked; the commander uses Groq when configured.
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.db.session import get_db
 from app.agents.crew import kickoff
 from app.models.response_plan import ResponsePlan, PlanStatus
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
+from app.models.report import Report
 
 router = APIRouter(prefix="/api/test", tags=["test-pipeline"])
 
@@ -36,18 +37,25 @@ def run_pipeline(incident_id: str, db: Session = Depends(get_db)):
 
     incident_uuid = uuid.UUID(incident_id)
     
-    # Ensure a mock incident exists to satisfy foreign key constraints
+    # Reuse the report's real location when this pipeline is launched from a
+    # report ID. This prevents simulated dispatches from targeting (0, 0).
+    report = db.query(Report).filter(Report.id == incident_uuid).first()
     incident = db.query(Incident).filter(Incident.id == incident_uuid).first()
     if not incident:
         incident = Incident(
             id=incident_uuid,
-            location="SRID=4326;POINT(0 0)",
+            report_id=report.id if report else None,
+            location=report.location if report else "SRID=4326;POINT(0 0)",
             severity=IncidentSeverity.medium,
             status=IncidentStatus.open,
-            start_time=datetime.utcnow(),
+            start_time=datetime.now(timezone.utc),
         )
         db.add(incident)
         db.commit()
+    elif report and incident.report_id in (None, report.id):
+        # Repair placeholder incidents created by earlier test-pipeline runs.
+        incident.report_id = report.id
+        incident.location = report.location
 
     # Save minimal persistence step
     plan = ResponsePlan(
@@ -56,7 +64,7 @@ def run_pipeline(incident_id: str, db: Session = Depends(get_db)):
         priority_score=raw_plan["priority_score"],
         summary=raw_plan["summary"],
         status=PlanStatus.pending_approval,
-        generated_at=datetime.utcnow()
+        generated_at=datetime.now(timezone.utc)
     )
     db.add(plan)
     db.commit()

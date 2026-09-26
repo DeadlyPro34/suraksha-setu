@@ -98,8 +98,9 @@ def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
             raise ValueError("summary must be a non-empty string")
         # Keep the requested concise summary contract even if a response slips
         # past the structured-output constraints.
-        sentence_count = sum(1 for char in summary if char in ".!?")
-        if sentence_count > 2:
+        import re
+        sentence_count = len(re.split(r'(?<=[.!?])\s+(?=[A-Z])', summary))
+        if sentence_count > 3:
             raise ValueError("summary must contain at most two sentences")
         return score, summary.strip()
     except Exception as exc:
