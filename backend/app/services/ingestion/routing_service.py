@@ -1,7 +1,7 @@
 """Keyless driving routes from the public OSRM demo server."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import httpx
 
