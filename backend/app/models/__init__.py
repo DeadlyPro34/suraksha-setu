@@ -12,3 +12,4 @@ from .route import Route, RouteStatus  # noqa: F401
 from .response_plan import ResponsePlan, PlanStatus  # noqa: F401
 from .approval import Approval, ApprovalDecision  # noqa: F401
 from .alert import Alert, AlertType  # noqa: F401
+from .dispatch import Dispatch, DispatchTargetRole, DispatchStatus  # noqa: F401
