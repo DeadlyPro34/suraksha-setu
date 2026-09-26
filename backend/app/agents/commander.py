@@ -3,6 +3,7 @@
 import json
 import logging
 import math
+import re
 from typing import Any, Dict
 
 from groq import Groq
@@ -62,7 +63,8 @@ def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
                     "content": (
                         "Act as a disaster response coordinator. Use only the supplied agent findings; "
                         "do not invent locations, teams, resources, or ETAs. Return a priority_score "
-                        "from 0 to 10 and a concise, actionable summary in 1–2 sentences. "
+                        "from 0 to 10 and a concise, actionable summary. The summary must be "
+                        "no more than 2 sentences and under 40 words. "
                         "Higher scores mean greater urgency."
                     ),
                 },
@@ -85,7 +87,7 @@ def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
                 },
             },
             temperature=0.2,
-            max_completion_tokens=256,
+            max_completion_tokens=800,
         )
         raw_content = response.choices[0].message.content or ""
         logger.info("Commander Groq raw response: %s", raw_content)
@@ -98,10 +100,13 @@ def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
             raise ValueError("summary must be a non-empty string")
         # Keep the requested concise summary contract even if a response slips
         # past the structured-output constraints.
-        import re
-        sentence_count = len(re.split(r'(?<=[.!?])\s+(?=[A-Z])', summary))
-        if sentence_count > 3:
+        sentence_count = len(
+            [sentence for sentence in re.split(r"(?<=[.!?])\s+", summary.strip()) if sentence]
+        )
+        if sentence_count > 2:
             raise ValueError("summary must contain at most two sentences")
+        if len(summary.split()) >= 40:
+            raise ValueError("summary must contain fewer than 40 words")
         return score, summary.strip()
     except Exception as exc:
         # Avoid logging exception text that could contain request details or
@@ -114,7 +119,14 @@ def generate_response_plan(incident_id: str) -> Dict[str, Any]:
     """Run all five agents and return a coordinated response-plan dict."""
     raw_outputs: Dict[str, Any] = {}
     for agent in _agents:
-        raw_outputs[agent.name] = agent.run(incident_id)
+        if isinstance(agent, RoadAgent):
+            flood_output = raw_outputs.get("flood_agent", {})
+            raw_outputs[agent.name] = agent.run(
+                incident_id,
+                flood_severity=flood_output.get("severity"),
+            )
+        else:
+            raw_outputs[agent.name] = agent.run(incident_id)
 
     priority, summary = _coordinate_with_groq(raw_outputs)
 
