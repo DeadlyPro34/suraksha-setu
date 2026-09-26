@@ -1,76 +1,86 @@
-"""Analyze forecast precipitation for an incident location."""
+"""Classify 24-hour rainfall for an incident using IMD rainfall bands."""
 
-import json
 import logging
-from typing import Any, Dict
-from groq import Groq
-from geoalchemy2.shape import to_shape
+import math
+from typing import Any, Dict, Tuple
 
 from app.agents.base import BaseAgent
-from app.core.config import settings
-from app.db.session import SessionLocal
-from app.models.report import Report
+from app.data.flood_prone_zones import FLOOD_PRONE_ZONES
 from app.services.ingestion.weather_service import get_precipitation_forecast
+from app.services.shelter_lookup import get_incident_coordinates
 
 
 logger = logging.getLogger(__name__)
+_MUMBAI_FALLBACK = (19.0760, 72.8777)
+_EXTREMELY_HEAVY_MM = 204.4
+
+
+def _severity_for_rainfall(next_24h_mm: float) -> str:
+    """Map forecast rainfall to severity using IMD 24-hour rainfall bands.
+
+    Source: India Meteorological Department 24-hour rainfall classification,
+    as published in IMD bulletins (light <15.6; moderate 15.6–64.4;
+    heavy 64.5–115.5; very heavy 115.6–204.4; extremely heavy >=204.5 mm).
+    Here heavy maps to high, while very heavy and extremely heavy map to critical.
+    """
+    if next_24h_mm < 15.6:
+        return "low"
+    if next_24h_mm < 64.5:
+        return "medium"
+    if next_24h_mm < 115.6:
+        return "high"
+    return "critical"
+
+
+def _flooded_percentage(next_24h_mm: float) -> float:
+    """Scale rainfall against IMD's extremely-heavy-rainfall reference ceiling."""
+    nonnegative_rainfall = max(0.0, next_24h_mm)
+    return round(min(100.0, nonnegative_rainfall / _EXTREMELY_HEAVY_MM * 100.0), 2)
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    radius_km = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    value = (
+        math.sin(delta_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    )
+    return 2 * radius_km * math.asin(math.sqrt(min(1.0, value)))
+
+
+def _nearest_zone(latitude: float, longitude: float) -> str:
+    zone = min(
+        FLOOD_PRONE_ZONES,
+        key=lambda item: _haversine_km(
+            latitude, longitude, item["lat"], item["lon"]
+        ),
+    )
+    return zone["name"]
+
 
 class FloodAgent(BaseAgent):
     name = "flood_agent"
 
     def run(self, incident_id: str) -> Dict[str, Any]:
-        # Lookup actual coordinates from DB using incident_id.
-        lat, lon = 19.0760, 72.8777  # Mumbai fallback coordinates
-        
         try:
-            with SessionLocal() as db:
-                report = db.query(Report).filter(Report.id == incident_id).first()
-                if report and report.location:
-                    shape = to_shape(report.location)
-                    lat, lon = shape.y, shape.x
-                else:
-                    from app.models.incident import Incident
-                    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-                    if incident and incident.location:
-                        shape = to_shape(incident.location)
-                        lat, lon = shape.y, shape.x
+            coordinates = get_incident_coordinates(incident_id)
         except Exception as exc:
-            logger.info("Could not load incident coordinates; using Mumbai defaults (%s)", type(exc).__name__)
+            logger.info(
+                "Could not load incident coordinates; using Mumbai defaults (%s)",
+                type(exc).__name__,
+            )
+            coordinates = None
 
-        weather_data = get_precipitation_forecast(lat, lon)
+        lat, lon = coordinates if coordinates else _MUMBAI_FALLBACK
+        rainfall_forecast = get_precipitation_forecast(lat, lon)
+        next_24h_mm = float(rainfall_forecast.get("next_24h_mm", 0.0) or 0.0)
 
-        # Default fallback values
-        severity = "high"
-        flooded_pct = 65
-        
-        if settings.GROQ_API_KEY:
-            try:
-                client = Groq(api_key=settings.GROQ_API_KEY)
-                prompt = f"""
-                You are a flood severity analysis agent. Based on this Open-Meteo
-                precipitation forecast for the incident location (lat {lat}, lon {lon}),
-                estimate flood severity and flooded percentage. Do not claim flood extent
-                is directly measured by precipitation. Forecast data: {json.dumps(weather_data)}
-                
-                Return EXACTLY a JSON object in this format (no other text):
-                {{"severity": "low|medium|high|critical", "flooded_pct": <number 0-100>}}
-                """
-                chat_completion = client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
-                    model="llama-3.1-8b-instant",  # Existing flood-analysis model
-                    response_format={"type": "json_object"}
-                )
-                
-                # Parse LLM output
-                result_str = chat_completion.choices[0].message.content
-                result = json.loads(result_str)
-                severity = result.get("severity", severity)
-                flooded_pct = result.get("flooded_pct", flooded_pct)
-            except Exception as exc:
-                logger.info("Flood severity LLM unavailable; using default assessment (%s)", type(exc).__name__)
-                
         return {
-            "severity": severity,
-            "flooded_pct": flooded_pct,
-            "raw_weather": weather_data
+            "severity": _severity_for_rainfall(next_24h_mm),
+            "flooded_pct": _flooded_percentage(next_24h_mm),
+            "rainfall_forecast": rainfall_forecast,
+            "nearest_zone": _nearest_zone(lat, lon),
+            "_debug_location_used": {"lat": lat, "lon": lon},
         }
