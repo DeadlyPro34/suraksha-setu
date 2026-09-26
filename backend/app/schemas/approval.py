@@ -16,6 +16,7 @@ class ApprovalOut(BaseModel):
     notes: Optional[str]
     modified_summary: Optional[str]
     decided_at: datetime
+    action_result: Optional[dict[str, int]] = None
 
     class Config:
         from_attributes = True

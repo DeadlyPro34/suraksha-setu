@@ -7,6 +7,7 @@ from app.schemas.approval import ApprovalCreate, ApprovalOut
 from app.models.approval import Approval, ApprovalDecision
 from app.models.response_plan import ResponsePlan, PlanStatus
 from app.models.user import User
+from app.services.notifications.action_service import trigger_action
 
 router = APIRouter(prefix="/api/response-plans", tags=["approvals"])
 
@@ -16,7 +17,14 @@ MOCK_USER_PHONE = "0000000000"
 
 @router.post("/{plan_id}/decision", response_model=ApprovalOut)
 def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depends(get_db)):
-    plan = db.query(ResponsePlan).filter(ResponsePlan.id == plan_id).first()
+    # Serialize decisions for one plan so concurrent approval retries cannot
+    # create multiple simulated action batches.
+    plan = (
+        db.query(ResponsePlan)
+        .filter(ResponsePlan.id == plan_id)
+        .with_for_update()
+        .first()
+    )
     if not plan:
         raise HTTPException(status_code=404, detail="ResponsePlan not found")
 
@@ -66,12 +74,18 @@ def submit_decision(plan_id: uuid.UUID, data: ApprovalCreate, db: Session = Depe
         )
         db.add(approval)
 
-    # Commit the plan status and approval together.
+    # Approval, plan status, and first action batch commit atomically.
     plan.status = PlanStatus(data.decision)
+    action_result = (
+        trigger_action(str(plan.id), db) if data.decision == "approved" else None
+    )
     db.commit()
     db.refresh(approval)
 
-    return approval
+    return {
+        **ApprovalOut.model_validate(approval).model_dump(),
+        "action_result": action_result,
+    }
 
 
 @router.get("/{plan_id}/decision", response_model=ApprovalOut)

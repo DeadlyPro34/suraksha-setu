@@ -14,5 +14,7 @@ class Settings(BaseSettings):
         # Resolve from this file, not the shell's current directory. This keeps
         # Uvicorn and Alembic on the same backend/.env when launched from any cwd.
         env_file = BACKEND_ROOT / '.env'
+        # Allow backend/.env to contain settings owned by other components.
+        extra = 'ignore'
 
 settings = Settings()

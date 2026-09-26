@@ -4,7 +4,7 @@ Temporary test route for verifying the agent pipeline works end-to-end.
 
 POST /api/test/run-pipeline/{incident_id}
 Returns mock output from all five agents combined by the commander.
-No database access, no LLM calls — pure pipeline wiring validation.
+Agent findings remain mocked; the commander uses Groq when configured.
 """
 
 from fastapi import APIRouter, Depends
@@ -31,7 +31,7 @@ def run_pipeline(incident_id: str, db: Session = Depends(get_db)):
     Returns:
         JSON body with the persisted plan details.
     """
-    # Run the mock pipeline
+    # Run the mocked-agent pipeline and Groq-backed commander.
     raw_plan = kickoff(incident_id)
 
     incident_uuid = uuid.UUID(incident_id)
