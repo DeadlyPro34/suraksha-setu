@@ -35,3 +35,4 @@ class ResponsePlan(Base):
     # --- relationships ---
     incident = relationship("Incident", back_populates="response_plans")
     approval = relationship("Approval", back_populates="response_plan", uselist=False)
+    dispatches = relationship("Dispatch", back_populates="response_plan")

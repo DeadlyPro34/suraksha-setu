@@ -5,9 +5,18 @@ source of truth, then runs migrations in either "offline" or "online" mode.
 """
 
 from logging.config import fileConfig
+from pathlib import Path
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+# The Windows `alembic.exe` launcher may put its Scripts directory on
+# sys.path instead of the current working directory. Add the backend root so
+# Alembic can import the application package when run from `backend/`.
+backend_root = Path(__file__).resolve().parents[3]
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
 
 from app.core.config import settings
 from app.models import Base  # noqa: F401 — ensure all models are registered
@@ -16,7 +25,10 @@ from app.models import Base  # noqa: F401 — ensure all models are registered
 config = context.config
 
 # Override sqlalchemy.url with the value from our app settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Alembic stores this value in ConfigParser, where percent signs begin
+# interpolation sequences. Double them here; ConfigParser will restore the
+# literal percent when engine_from_config reads the URL.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Set up Python logging from the .ini file
 if config.config_file_name is not None:

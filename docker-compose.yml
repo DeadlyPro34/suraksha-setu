@@ -16,10 +16,8 @@ services:
       - "8000:8000"
     depends_on:
       - db
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://user:password@db:5432/suraksha_setu}
-      GROQ_API_KEY: ${GROQ_API_KEY:-your-key-here}
-      JWT_SECRET: ${JWT_SECRET:-change-me}
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
 
@@ -31,6 +29,7 @@ services:
       - backend
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      BACKEND_INTERNAL_URL: http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules
