@@ -8,3 +8,5 @@ geoalchemy2
 httpx
 groq
 shapely
+PyJWT
+bcrypt

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { checkHealth, getAlerts, getReports, getShelters, getResponsePlanActions, runPipeline, submitDecision } from "@/lib/api";
+import { getCurrentUser } from "@/lib/api";
+import { homeForRole } from "@/lib/auth";
 import { Alert, Report, ResponsePlan, ResponsePlanActions, Shelter } from "@/lib/types";
 
 /* ── Agent metadata ── */
@@ -25,6 +28,22 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+function availableResourceLines(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item !== "object" || item === null) return [];
+    const resource = item as Record<string, unknown>;
+    if (
+      typeof resource.type !== "string" ||
+      typeof resource.quantity !== "number" ||
+      typeof resource.status !== "string"
+    ) {
+      return [];
+    }
+    return [`${humanize(resource.type)}: ${resource.quantity} ${resource.status}`];
+  });
+}
+
 function priorityBadge(score: number) {
   if (score >= 8) return { label: "Critical", cls: "bg-red-100 text-red-700 border-red-200" };
   if (score >= 5) return { label: "High", cls: "bg-amber-100 text-amber-700 border-amber-200" };
@@ -32,6 +51,8 @@ function priorityBadge(score: number) {
 }
 
 export default function OfficialDashboard() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const [health, setHealth] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const [incidentId, setIncidentId] = useState("");
   const [plan, setPlan] = useState<ResponsePlan | null>(null);
@@ -46,6 +67,27 @@ export default function OfficialDashboard() {
   const [sheltersError, setSheltersError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertsError, setAlertsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUser()
+      .then((user) => {
+        if (!active) return;
+        if (user.role !== "official" && user.role !== "admin") {
+          router.replace(homeForRole(user.role));
+          return;
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        window.localStorage.removeItem("access_token");
+        router.replace("/login");
+      });
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const loadRecentReports = useCallback(async () => {
     setReportsLoading(true);
@@ -67,12 +109,14 @@ export default function OfficialDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!authChecked) return;
     checkHealth().then(() => setHealth("connected")).catch(() => setHealth("disconnected"));
-  }, []);
+  }, [authChecked]);
 
   useEffect(() => {
+    if (!authChecked) return;
     void loadRecentReports();
-  }, [loadRecentReports]);
+  }, [authChecked, loadRecentReports]);
 
   const activeAlerts = alerts.filter((alert) => alert.type !== "all_clear").length;
   const openShelters = shelters.filter((shelter) => shelter.status === "open").length;
@@ -131,6 +175,10 @@ export default function OfficialDashboard() {
     }
   };
 
+  if (!authChecked) {
+    return <main className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">Checking authentication…</main>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* ── Sidebar ── */}
@@ -149,25 +197,40 @@ export default function OfficialDashboard() {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1">
           {[
-            { icon: "📊", label: "Dashboard", active: true },
-            { icon: "🚨", label: "Incidents", active: false },
-            { icon: "✅", label: "Approvals", active: false },
-            { icon: "🏠", label: "Shelters", active: false },
-            { icon: "👥", label: "Teams", active: false },
-            { icon: "📦", label: "Resources", active: false },
-            { icon: "🗺️", label: "Map View", active: false },
+            { icon: "📊", label: "Dashboard", href: "/dashboard", active: true },
+            { icon: "🚨", label: "Incidents", href: "/incidents", active: false },
+            { icon: "✅", label: "Approvals", href: "/approvals", active: false },
+            { icon: "🏠", label: "Shelters", href: "/shelters", active: false },
+            { icon: "👥", label: "Teams", href: null, active: false },
+            { icon: "📦", label: "Resources", href: null, active: false },
+            { icon: "🗺️", label: "Map View", href: null, active: false },
           ].map((item) => (
-            <button
-              key={item.label}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                item.active
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
-              }`}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                aria-current={item.active ? "page" : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  item.active
+                    ? "bg-blue-600 text-white font-medium"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            ) : (
+              <div
+                key={item.label}
+                aria-disabled="true"
+                title={`${item.label} page is not available yet`}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 cursor-not-allowed"
+              >
+                <span>{item.icon}</span>
+                <span className="flex-1">{item.label}</span>
+                <span className="text-[9px] uppercase tracking-wide text-slate-500">Soon</span>
+              </div>
+            )
           ))}
         </nav>
 
@@ -414,16 +477,27 @@ export default function OfficialDashboard() {
 
                       return (
                         <div key={agentName} className={`card p-4 border ${meta.color}`}>
-                          <h4 className="font-semibold text-sm mb-3 pb-2 border-b border-slate-200 flex items-center gap-2">
+                      <h4 className="font-semibold text-sm mb-3 pb-2 border-b border-slate-200 flex items-center gap-2">
                             <span className="text-lg">{meta.icon}</span>
                             <span className="text-slate-900">{meta.label}</span>
                           </h4>
                           <dl className="space-y-2">
                             {displayEntries.map(([key, value]) => (
-                              <div key={key} className="flex justify-between items-baseline">
+                              <div
+                                key={key}
+                                className={`flex justify-between ${agentName === "resource_agent" && key === "available_resources" ? "items-start" : "items-baseline"}`}
+                              >
                                 <dt className="text-xs text-slate-500">{humanize(key)}</dt>
                                 <dd className="text-sm font-medium text-slate-900 text-right max-w-[60%] break-words">
-                                  {formatValue(value)}
+                                  {agentName === "resource_agent" && key === "available_resources" ? (
+                                    <ul className="space-y-1">
+                                      {availableResourceLines(value).map((line) => (
+                                        <li key={line}>{line}</li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    formatValue(value)
+                                  )}
                                 </dd>
                               </div>
                             ))}

@@ -51,7 +51,7 @@ def get_incident_coordinates(incident_id: str) -> Optional[Tuple[float, float]]:
         return float(shape.y), float(shape.x)
 
 
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     radius_km = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)
@@ -82,7 +82,7 @@ def find_nearest_shelter(
                 continue
             shape = to_shape(shelter.location)
             shelter_lat, shelter_lon = float(shape.y), float(shape.x)
-            distance = _haversine_km(
+            distance = haversine_km(
                 latitude, longitude, shelter_lat, shelter_lon
             )
             if distance < nearest_distance:

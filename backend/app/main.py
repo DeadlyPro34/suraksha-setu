@@ -6,9 +6,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.routes.test_pipeline import router as test_pipeline_router
+from app.api.routes.auth import router as auth_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.alerts import router as alerts_router
 from app.api.routes.shelters import router as shelters_router
+from app.api.routes.resources import router as resources_router
 from app.api.routes.approvals import router as approvals_router
 from app.api.routes.actions import router as actions_router
 from app.db.session import get_db
@@ -31,9 +33,11 @@ app.add_middleware(
 
 # --- Route registration ---
 app.include_router(test_pipeline_router)
+app.include_router(auth_router)
 app.include_router(reports_router)
 app.include_router(alerts_router)
 app.include_router(shelters_router)
+app.include_router(resources_router)
 app.include_router(approvals_router)
 app.include_router(actions_router)
 

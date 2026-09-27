@@ -1,14 +1,16 @@
-"""Insert the demo Ahmedabad shelters into the configured database.
+"""Insert the demo Ahmedabad shelters and regional resources.
 
-Run from the repository root with:
-    backend\\venv\\Scripts\\python.exe -m app.db.seed
+Run from the backend directory with:
+    .\\venv\\Scripts\\python.exe -m app.db.seed
 
-The seed is idempotent by shelter name; existing rows are left unchanged.
+The seed is idempotent by shelter name and unassigned available resource type;
+existing rows are left unchanged.
 """
 
 from geoalchemy2 import WKTElement
 
 from app.db.session import SessionLocal
+from app.models.resource import Resource, ResourceStatus, ResourceType
 from app.models.shelter import Shelter, ShelterStatus
 
 
@@ -43,6 +45,16 @@ SHELTERS = (
         "has_medical": False,
         "status": ShelterStatus.open,
     },
+)
+
+# Water stock quantity is measured in liters; food stock is measured in
+# person-days so the Resource agent can derive days at the current occupancy.
+RESOURCES = (
+    {"type": ResourceType.medical, "quantity": 15, "latitude": 23.055, "longitude": 72.560},
+    {"type": ResourceType.food, "quantity": 200, "latitude": 23.037, "longitude": 72.529},
+    {"type": ResourceType.water, "quantity": 500, "latitude": 23.000, "longitude": 72.600},
+    {"type": ResourceType.boat, "quantity": 3, "latitude": 23.055, "longitude": 72.560},
+    {"type": ResourceType.personnel, "quantity": 12, "latitude": 23.037, "longitude": 72.529},
 )
 
 
@@ -81,6 +93,51 @@ def seed_shelters() -> tuple[int, int]:
     return created, already_present
 
 
+def seed_resources() -> tuple[int, int]:
+    """Create missing unassigned regional resource rows; return counts."""
+    created = 0
+    already_present = 0
+    with SessionLocal() as db:
+        try:
+            for data in RESOURCES:
+                exists = (
+                    db.query(Resource.id)
+                    .filter(
+                        Resource.type == data["type"],
+                        Resource.incident_id.is_(None),
+                        Resource.status == ResourceStatus.available,
+                    )
+                    .first()
+                )
+                if exists:
+                    already_present += 1
+                    continue
+
+                db.add(
+                    Resource(
+                        type=data["type"],
+                        quantity=data["quantity"],
+                        incident_id=None,
+                        status=ResourceStatus.available,
+                        location=WKTElement(
+                            f"POINT({data['longitude']} {data['latitude']})",
+                            srid=4326,
+                        ),
+                    )
+                )
+                created += 1
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+    return created, already_present
+
+
 if __name__ == "__main__":
-    inserted, skipped = seed_shelters()
-    print(f"Shelter seed complete: {inserted} inserted, {skipped} already present.")
+    shelter_inserted, shelter_skipped = seed_shelters()
+    resource_inserted, resource_skipped = seed_resources()
+    print(
+        "Seed complete: "
+        f"shelters {shelter_inserted} inserted, {shelter_skipped} already present; "
+        f"resources {resource_inserted} inserted, {resource_skipped} already present."
+    )

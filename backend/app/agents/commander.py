@@ -125,6 +125,11 @@ def generate_response_plan(incident_id: str) -> Dict[str, Any]:
                 incident_id,
                 flood_severity=flood_output.get("severity"),
             )
+        elif isinstance(agent, ResourceAgent):
+            raw_outputs[agent.name] = agent.run(
+                incident_id,
+                shelter_output=raw_outputs.get("shelter_agent", {}),
+            )
         else:
             raw_outputs[agent.name] = agent.run(incident_id)
 

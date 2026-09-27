@@ -35,6 +35,7 @@ class ShelterAgent(BaseAgent):
                 "status": "unknown",
                 "has_electricity": None,
                 "has_medical": None,
+                "current_occupancy": None,
                 "_debug_location_used": {"lat": lat, "lon": lon},
             }
 
@@ -57,5 +58,6 @@ class ShelterAgent(BaseAgent):
             "status": status,
             "has_electricity": shelter.has_electricity,
             "has_medical": shelter.has_medical,
+            "current_occupancy": shelter.current_occupancy,
             "_debug_location_used": {"lat": lat, "lon": lon},
         }

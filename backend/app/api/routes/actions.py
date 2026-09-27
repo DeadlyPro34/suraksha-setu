@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.alert import Alert
 from app.models.dispatch import Dispatch
@@ -37,7 +38,11 @@ router = APIRouter(prefix="/api/response-plans", tags=["actions"])
 
 
 @router.get("/{plan_id}/actions", response_model=ResponsePlanActionsOut)
-def get_plan_actions(plan_id: UUID, db: Session = Depends(get_db)):
+def get_plan_actions(
+    plan_id: UUID,
+    db: Session = Depends(get_db),
+    _current_user=Depends(require_role("official", "admin", "field_officer")),
+):
     plan = db.query(ResponsePlan).filter(ResponsePlan.id == plan_id).first()
     if plan is None:
         raise HTTPException(status_code=404, detail="ResponsePlan not found")

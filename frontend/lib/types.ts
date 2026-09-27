@@ -1,4 +1,14 @@
-export interface User {}
+export interface User {
+  id: string;
+  name: string;
+  phone: string;
+  role: "citizen" | "field_officer" | "volunteer" | "official" | "admin";
+}
+export interface AuthResponse {
+  access_token: string;
+  token_type: "bearer";
+  user: User;
+}
 export interface Report {
   id: string;
   reporter_id: string | null;

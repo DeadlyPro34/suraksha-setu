@@ -1,10 +1,7 @@
-# TEMP — remove once real incident flow exists
-"""
-Temporary test route for verifying the agent pipeline works end-to-end.
+"""Authenticated pipeline route for verifying the agent pipeline.
 
 POST /api/test/run-pipeline/{incident_id}
-Returns mock output from all five agents combined by the commander.
-Agent findings remain mocked; the commander uses Groq when configured.
+Requires an official or admin bearer token.
 """
 
 from fastapi import APIRouter, Depends
@@ -13,6 +10,8 @@ from datetime import datetime, timezone
 import uuid
 
 from app.db.session import get_db
+from app.core.dependencies import require_role
+from app.models.user import User
 from app.agents.crew import kickoff
 from app.models.response_plan import ResponsePlan, PlanStatus
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
@@ -22,7 +21,11 @@ router = APIRouter(prefix="/api/test", tags=["test-pipeline"])
 
 
 @router.post("/run-pipeline/{incident_id}")
-def run_pipeline(incident_id: str, db: Session = Depends(get_db)):
+def run_pipeline(
+    incident_id: str,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official", "admin")),
+):
     """Execute the mock agent pipeline and return the response plan.
 
     Args:
