@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ReactNode } from "react";
 import Link from "next/link";
-import { checkHealth, getAlerts, getReports, getShelters } from "@/lib/api";
+import { analyzeMyReport, checkHealth, getCitizenAlerts, getMyReports, getShelters } from "@/lib/api";
 import { Alert, Report, Shelter } from "@/lib/types";
 import { BrandMark, Waves } from "@/components/Brand";
 
@@ -39,11 +39,13 @@ export default function CitizenHome() {
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [sheltersError, setSheltersError] = useState<string | null>(null);
   const [reportsError, setReportsError] = useState<string | null>(null);
+  const [verification, setVerification] = useState<Record<string, string>>({});
+  const [verifyingReportId, setVerifyingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     checkHealth().then(() => { if (active) setBackendUp(true); }).catch(() => { if (active) setBackendUp(false); });
-    Promise.allSettled([getReports(5), getAlerts(10), getShelters(200)]).then(([rep, alr, shl]) => {
+    Promise.allSettled([getMyReports(10), getCitizenAlerts(10), getShelters(200)]).then(([rep, alr, shl]) => {
       if (!active) return;
       if (rep.status === "fulfilled") setReports(rep.value); else setReportsError(errText(rep, "Could not load reports."));
       if (alr.status === "fulfilled") setAlerts(alr.value); else setAlertsError(errText(alr, "Could not load alerts."));
@@ -63,6 +65,27 @@ export default function CitizenHome() {
     { n: val(loading, reportsError, reports.length), label: "recent reports" },
   ];
 
+  const verifyReport = async (reportId: string) => {
+    setVerifyingReportId(reportId);
+    setVerification((current) => ({ ...current, [reportId]: "Checking report timestamp and location…" }));
+    try {
+      const result = await analyzeMyReport(reportId);
+      const output = result.raw_agent_outputs?.misinformation_agent;
+      const credibility = output?.credibility_score;
+      const status = output?.verification_status;
+      setVerification((current) => ({
+        ...current,
+        [reportId]: typeof credibility === "number"
+          ? `Checked · credibility ${credibility.toFixed(2)} · ${String(status ?? "")}`
+          : `Check complete · ${String(status ?? "details unavailable")}`,
+      }));
+    } catch (err) {
+      setVerification((current) => ({ ...current, [reportId]: err instanceof Error ? err.message : "Could not check report." }));
+    } finally {
+      setVerifyingReportId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <header className="gradient-primary text-white">
@@ -76,7 +99,7 @@ export default function CitizenHome() {
               <span className={`w-2 h-2 rounded-full ${backendUp ? "bg-emerald-400 animate-pulse-dot" : backendUp === false ? "bg-red-400" : "bg-slate-400"}`} />
               {backendUp ? "Live" : backendUp === false ? "Offline" : "Connecting"}
             </span>
-            <Link href="/login" className="text-sm font-semibold px-3.5 py-1.5 rounded-lg border border-white/30 hover:bg-white/10">Sign in</Link>
+            <button onClick={() => { window.localStorage.removeItem("access_token"); window.location.assign("/login"); }} className="text-sm font-semibold px-3.5 py-1.5 rounded-lg border border-white/30 hover:bg-white/10">Sign out</button>
           </div>
         </div>
 
@@ -145,7 +168,7 @@ export default function CitizenHome() {
 
         <section aria-labelledby="reports-h">
           <div className="flex items-baseline justify-between mb-3">
-            <h2 id="reports-h" className="font-display text-xl font-bold">Latest reports</h2>
+            <h2 id="reports-h" className="font-display text-xl font-bold">My reports</h2>
             <Link href="/report" className="text-sm font-semibold text-blue-700 hover:underline">Add a report</Link>
           </div>
           <div className="space-y-2">
@@ -159,6 +182,10 @@ export default function CitizenHome() {
                   <h3 className="font-semibold text-slate-900 capitalize">{report.type.replace(/_/g, " ")}</h3>
                   <p className="text-slate-600 mt-0.5">{report.description}</p>
                   <p className="text-xs text-slate-500 mt-1.5">{report.lat.toFixed(4)}, {report.lon.toFixed(4)} — {new Date(report.created_at).toLocaleString()}</p>
+                  <button type="button" disabled={verifyingReportId === report.id} onClick={() => void verifyReport(report.id)} className="mt-2 text-xs font-medium text-blue-700 hover:underline disabled:opacity-50">
+                    {verifyingReportId === report.id ? "Checking…" : "Run timestamp and location checks"}
+                  </button>
+                  {verification[report.id] && <p role="status" className="text-xs text-slate-600 mt-1">{verification[report.id]}</p>}
                 </div>
                 <span className={`badge shrink-0 ${report.status === "verified" ? "badge-success" : report.status === "rejected" ? "badge-danger" : "badge-warning"}`}>
                   {report.status.replace(/_/g, " ")}
