@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
-  role: "citizen" | "field_officer" | "volunteer" | "official" | "admin";
+  role: "citizen" | "field_officer" | "volunteer" | "official";
 }
 export interface AuthResponse {
   access_token: string;
@@ -32,6 +32,10 @@ export interface Shelter {
   has_electricity: boolean;
   has_medical: boolean;
   status: "open" | "full" | "closed";
+}
+export interface NearbyShelter extends Shelter {
+  distance_km: number;
+  capacity_pct: number;
 }
 export interface Resource {}
 

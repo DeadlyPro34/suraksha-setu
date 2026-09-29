@@ -49,7 +49,7 @@ export default function IncidentsPage() {
           ].map((item) => (
             <Link
               key={item.label}
-              href={"href" in item ? item.href : "#"}
+              href={item.href ?? "#"}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 "active" in item && item.active
                   ? "bg-blue-600 text-white font-medium"

@@ -75,7 +75,7 @@ export default function OfficialDashboard() {
     getCurrentUser()
       .then((user) => {
         if (!active) return;
-        if (user.role !== "official" && user.role !== "admin") {
+        if (user.role !== "official") {
           router.replace(homeForRole(user.role));
           return;
         }
