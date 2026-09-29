@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from datetime import datetime, timezone
 from geoalchemy2.shape import to_shape
 
+from app.core.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.report import Report
+from app.models.incident import Incident, IncidentSeverity, IncidentStatus
+from app.models.user import User
 from app.schemas.report import ReportCreate, ReportOut
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -39,14 +43,40 @@ def list_reports(
     return [_report_out(report) for report in reports]
 
 
-@router.post("/", response_model=ReportOut)
-def create_report(report_in: ReportCreate, db: Session = Depends(get_db)):
-    # Create the report
-    # Convert lat/lon to PostGIS geometry WKT
-    location_wkt = f"SRID=4326;POINT({report_in.lon} {report_in.lat})"
+@router.get("/mine", response_model=list[ReportOut])
+def list_my_reports(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reports = (
+        db.query(Report)
+        .filter(Report.reporter_id == current_user.id)
+        .order_by(Report.created_at.desc(), Report.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_report_out(report) for report in reports]
+
+
+@router.post(
+    "/",
+    response_model=ReportOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_report(
+    report_in: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role("citizen", "field_officer", "volunteer")
+    ),
+):
+    location_wkt = (
+        f"SRID=4326;POINT({report_in.location.lon} {report_in.location.lat})"
+    )
     
     db_report = Report(
-        reporter_id=report_in.reporter_id,
+        reporter_id=current_user.id,
         type=report_in.type,
         description=report_in.description,
         location=location_wkt,
@@ -58,7 +88,7 @@ def create_report(report_in: ReportCreate, db: Session = Depends(get_db)):
         db.refresh(db_report)
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Failed to create report. Please try again.")
+        raise HTTPException(status_code=400, detail="Failed to create report. Please try again.") from e
         
     return _report_out(db_report)
 
@@ -73,9 +103,30 @@ def get_report(report_id: UUID, db: Session = Depends(get_db)):
 from app.agents.crew import kickoff
 
 @router.post("/{report_id}/analyze")
-def analyze_report(report_id: UUID, db: Session = Depends(get_db)):
+def analyze_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role("citizen", "field_officer", "volunteer", "official")
+    ),
+):
     db_report = db.query(Report).filter(Report.id == report_id).first()
     if not db_report:
         raise HTTPException(status_code=404, detail="Report not found")
-        
-    return kickoff(str(report_id))
+    if db_report.reporter_id != current_user.id and current_user.role.value != "official":
+        raise HTTPException(status_code=403, detail="You can only analyze your own reports")
+
+    incident = db.query(Incident).filter(Incident.report_id == db_report.id).first()
+    if incident is None:
+        incident = Incident(
+            report_id=db_report.id,
+            location=db_report.location,
+            severity=IncidentSeverity.medium,
+            status=IncidentStatus.open,
+            start_time=db_report.created_at or datetime.now(timezone.utc),
+        )
+        db.add(incident)
+        db.commit()
+        db.refresh(incident)
+
+    return kickoff(str(incident.id))

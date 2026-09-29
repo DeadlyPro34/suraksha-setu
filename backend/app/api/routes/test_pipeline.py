@@ -1,7 +1,7 @@
 """Authenticated pipeline route for verifying the agent pipeline.
 
 POST /api/test/run-pipeline/{incident_id}
-Requires an official or admin bearer token.
+Requires an official bearer token.
 """
 
 from fastapi import APIRouter, Depends
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/test", tags=["test-pipeline"])
 def run_pipeline(
     incident_id: str,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_role("official", "admin")),
+    _current_user: User = Depends(require_role("official")),
 ):
     """Execute the mock agent pipeline and return the response plan.
 

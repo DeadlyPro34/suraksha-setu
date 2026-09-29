@@ -17,7 +17,7 @@ def submit_decision(
     plan_id: uuid.UUID,
     data: ApprovalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("official", "admin")),
+    current_user: User = Depends(require_role("official")),
 ):
     # Serialize decisions for one plan so concurrent approval retries cannot
     # create multiple simulated action batches.
