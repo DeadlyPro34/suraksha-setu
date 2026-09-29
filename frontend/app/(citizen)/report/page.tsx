@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 export default function ReportIncident() {
   const [type, setType] = useState<Report["type"]>("flood");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [gettingLocation, setGettingLocation] = useState(false);
@@ -46,11 +47,10 @@ export default function ReportIncident() {
     setSubmitting(true);
     try {
       const report = await createReport({
-        reporter_id: null,
         type,
         description: description.trim(),
-        lat: Number(lat),
-        lon: Number(lon),
+        location: { lat: Number(lat), lon: Number(lon) },
+        ...(imageUrl.trim() ? { image_url: imageUrl.trim() } : {}),
       });
       setCreatedReport(report);
       setSubmitted(true);
@@ -133,7 +133,18 @@ export default function ReportIncident() {
             {locationMessage && <p role="status" className="text-sm text-amber-800 mt-2">{locationMessage}</p>}
           </div>
 
-          <p className="text-sm text-slate-500 px-1">Photo and video uploads are not available yet.</p>
+          <div className="card p-5">
+            <label htmlFor="imageUrl" className="block font-semibold text-slate-900 mb-2">Photo / Video URL</label>
+            <input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              placeholder="Optional link to an already hosted image"
+              className={field}
+            />
+            <p className="text-sm text-slate-500 mt-2">File upload storage is not connected yet; you can add an image URL.</p>
+          </div>
 
           {submitError && <p role="alert" className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-800">{submitError}</p>}
           <button type="submit" disabled={submitting || !description.trim() || !lat || !lon}
