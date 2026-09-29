@@ -44,6 +44,7 @@ h1, h2, h3 { font-family: var(--font-display), var(--font-body), sans-serif; let
   .animate-fade-in, .animate-slide-in, .animate-pulse-dot, .wave-drift { animation: none; }
 }
 
+@layer components {
 .glass { background: rgba(255,255,255,.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.4); }
 
 .gradient-primary { background: linear-gradient(160deg, #0E2A3B 0%, #185369 100%); }
@@ -70,3 +71,4 @@ h1, h2, h3 { font-family: var(--font-display), var(--font-body), sans-serif; let
 .badge-warning { background: #FDEDC7; color: #8A5600; }
 .badge-info    { background: #DCEEF4; color: #185369; }
 .badge-neutral { background: #E9EFF2; color: #4A5F6C; }
+}
