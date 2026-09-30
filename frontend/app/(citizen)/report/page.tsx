@@ -4,10 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { createReport } from "@/lib/api";
 import { Report } from "@/lib/types";
+import { Icon } from "@/components/Icons";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function ReportIncident() {
   const [type, setType] = useState<Report["type"]>("flood");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [gettingLocation, setGettingLocation] = useState(false);
@@ -44,11 +47,10 @@ export default function ReportIncident() {
     setSubmitting(true);
     try {
       const report = await createReport({
-        reporter_id: null,
         type,
         description: description.trim(),
-        lat: Number(lat),
-        lon: Number(lon),
+        location: { lat: Number(lat), lon: Number(lon) },
+        ...(imageUrl.trim() ? { image_url: imageUrl.trim() } : {}),
       });
       setCreatedReport(report);
       setSubmitted(true);
@@ -59,141 +61,95 @@ export default function ReportIncident() {
     }
   };
 
+  const field = "w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none";
+  const TYPES = [
+    { value: "flood", icon: "flood", label: "Flood" },
+    { value: "road_block", icon: "road", label: "Road blocked" },
+    { value: "medical", icon: "medical", label: "Medical help" },
+    { value: "other", icon: "incident", label: "Something else" },
+  ];
+
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="card p-8 max-w-md w-full text-center animate-fade-in">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Report Submitted</h2>
-          <p className="text-slate-500 text-sm mb-6">
-            Your report was saved and is pending verification. Keep this reference ID for follow-up.
-          </p>
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl mb-6">
-            <p className="text-xs text-blue-700 break-all">🆔 Report ID: {createdReport?.id}</p>
-            <p className="text-xs text-blue-700">📍 Location: {lat}, {lon}</p>
-            <p className="text-xs text-blue-700 mt-1">📝 Type: {type.replace("_", " ")}</p>
-          </div>
-          <Link href="/" className="inline-block px-6 py-2.5 gradient-primary text-white font-medium rounded-xl hover:opacity-90 transition-opacity">
-            Back to Home
-          </Link>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="card p-8 max-w-md w-full animate-fade-in">
+          <span className="inline-flex w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>
+          <h1 className="font-display text-2xl font-bold text-slate-900 mt-4">Report received</h1>
+          <p className="text-slate-600 mt-1">It is saved and waiting for verification. Keep this ID if you need to follow up.</p>
+          <dl className="mt-5 rounded-lg bg-slate-50 border border-slate-200 divide-y divide-slate-200 text-sm">
+            <div className="p-3"><dt className="text-slate-500">Report ID</dt><dd className="font-semibold text-slate-900 break-all">{createdReport?.id}</dd></div>
+            <div className="p-3"><dt className="text-slate-500">Type</dt><dd className="font-semibold text-slate-900 capitalize">{type.replace(/_/g, " ")}</dd></div>
+            <div className="p-3"><dt className="text-slate-500">Location</dt><dd className="font-semibold text-slate-900">{lat}, {lon}</dd></div>
+          </dl>
+          <Link href="/" className="mt-6 block text-center py-3 bg-ink text-white font-semibold rounded-lg hover:bg-blue-800">Back to home</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link href="/" className="text-slate-400 hover:text-slate-600 transition-colors">
-            ← Back
-          </Link>
-          <h1 className="text-lg font-bold text-slate-900">Report Incident</h1>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      <PageHeader title="Report an incident" sub="Tell us what you see. Officials review every report." />
 
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in">
-          {/* Incident Type */}
-          <div className="card p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-3">Incident Type</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { value: "flood", icon: "🌊", label: "Flood" },
-                { value: "road_block", icon: "🚧", label: "Road Block" },
-                { value: "medical", icon: "🏥", label: "Medical" },
-                { value: "other", icon: "⚠️", label: "Other" },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
+        <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
+          <fieldset className="card p-5">
+            <legend className="sr-only">Incident type</legend>
+            <h2 className="font-semibold text-slate-900 mb-3">What is happening?</h2>
+            <div role="radiogroup" aria-label="Incident type" className="grid grid-cols-2 gap-2">
+              {TYPES.map((opt) => (
+                <button key={opt.value} type="button" role="radio" aria-checked={type === opt.value}
                   onClick={() => setType(opt.value as Report["type"])}
-                  className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                    type === opt.value
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <div className="text-xl mb-1">{opt.icon}</div>
-                  <div className="text-sm font-medium text-slate-900">{opt.label}</div>
+                  className={`p-3 rounded-lg border-2 text-left flex items-center gap-3 ${type === opt.value ? "border-blue-600 bg-blue-50 text-blue-900" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"}`}>
+                  <Icon name={opt.icon} className="w-6 h-6 shrink-0" />
+                  <span className="font-semibold text-sm">{opt.label}</span>
                 </button>
               ))}
             </div>
+          </fieldset>
+
+          <div className="card p-5">
+            <label htmlFor="desc" className="block font-semibold text-slate-900 mb-2">Describe the situation</label>
+            <textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} required
+              placeholder="For example: water is knee-deep on the main road and rising." className={`${field} resize-none`} />
           </div>
 
-          {/* Description */}
           <div className="card p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the situation..."
-              rows={4}
-              required
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all"
-            />
-          </div>
-
-          {/* Location */}
-          <div className="card p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
-            <button
-              type="button"
-              onClick={getLocation}
-              disabled={gettingLocation}
-              className="w-full mb-3 py-3 border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-medium rounded-xl hover:bg-blue-100 transition-all disabled:opacity-50"
-            >
-              {gettingLocation ? "📍 Getting location..." : lat ? `📍 ${lat}, ${lon}` : "📍 Use Current GPS Location"}
+            <h2 className="font-semibold text-slate-900 mb-3">Where is it?</h2>
+            <button type="button" onClick={getLocation} disabled={gettingLocation}
+              className="w-full mb-3 py-3 border-2 border-dashed border-blue-300 bg-blue-50 text-blue-800 font-semibold rounded-lg hover:bg-blue-100 disabled:opacity-50">
+              {gettingLocation ? "Finding your location…" : lat ? `Location set: ${lat}, ${lon}` : "Use my current location"}
             </button>
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="Latitude"
-                min="-90"
-                max="90"
-                step="any"
-                required
-                className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
-              <input
-                type="number"
-                value={lon}
-                onChange={(e) => setLon(e.target.value)}
-                placeholder="Longitude"
-                min="-180"
-                max="180"
-                step="any"
-                required
-                className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
+              <div>
+                <label htmlFor="lat" className="block text-sm text-slate-600 mb-1">Latitude</label>
+                <input id="lat" type="number" value={lat} onChange={(e) => setLat(e.target.value)} min="-90" max="90" step="any" required className={field} />
+              </div>
+              <div>
+                <label htmlFor="lon" className="block text-sm text-slate-600 mb-1">Longitude</label>
+                <input id="lon" type="number" value={lon} onChange={(e) => setLon(e.target.value)} min="-180" max="180" step="any" required className={field} />
+              </div>
             </div>
-            {locationMessage && <p role="status" className="text-xs text-amber-700 mt-2">{locationMessage}</p>}
+            {locationMessage && <p role="status" className="text-sm text-amber-800 mt-2">{locationMessage}</p>}
           </div>
 
-          {/* Photo uploads are not connected to storage yet. */}
           <div className="card p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Photo / Video</label>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center">
-              <div className="text-3xl mb-2">📷</div>
-              <p className="text-sm text-slate-500">Photo and video uploads are not connected yet.</p>
-            </div>
+            <label htmlFor="imageUrl" className="block font-semibold text-slate-900 mb-2">Photo / Video URL</label>
+            <input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              placeholder="Optional link to an already hosted image"
+              className={field}
+            />
+            <p className="text-sm text-slate-500 mt-2">File upload storage is not connected yet; you can add an image URL.</p>
           </div>
 
-          {/* Submit */}
-          {submitError && (
-            <p role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
-              {submitError}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={submitting || !description.trim() || !lat || !lon}
-            className="w-full py-3.5 gradient-danger text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-lg shadow-red-500/25"
-          >
-            {submitting ? "Submitting Report..." : "🚨 Submit Report"}
+          {submitError && <p role="alert" className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-800">{submitError}</p>}
+          <button type="submit" disabled={submitting || !description.trim() || !lat || !lon}
+            className="w-full py-3.5 bg-alarm text-white font-bold rounded-lg hover:brightness-110 disabled:opacity-50">
+            {submitting ? "Sending…" : "Send report"}
           </button>
         </form>
       </main>

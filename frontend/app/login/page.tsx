@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { homeForRole } from "@/lib/auth";
 import { loginUser, saveAccessToken } from "@/lib/api";
-
+import { BrandMark, Waves } from "@/components/Brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,73 +30,54 @@ export default function LoginPage() {
     }
   };
 
+  const field = "w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none";
+
   return (
-    <main className="min-h-screen flex">
-      <section className="hidden lg:flex lg:w-1/2 gradient-primary flex-col justify-center items-center text-white p-12">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-6">🛡️</div>
-          <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Suraksha Setu</h1>
-          <p className="text-lg text-blue-100">AI-Powered Disaster Response System</p>
-          <p className="mt-4 text-sm text-blue-200/80">
-            Real-time flood analysis • Shelter management • Emergency coordination
+    <main className="min-h-screen flex flex-col lg:flex-row">
+      <section className="gradient-primary text-white lg:w-[46%] flex flex-col justify-between">
+        <div className="p-6 lg:p-12">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <BrandMark />
+            <span className="font-display text-lg font-bold">Suraksha Setu</span>
+          </Link>
+          <h1 className="font-display text-3xl lg:text-5xl font-extrabold leading-[1.08] mt-8 lg:mt-24 max-w-md">
+            Coordinate the response. Keep people safe.
+          </h1>
+          <p className="mt-4 text-blue-100 max-w-sm">
+            For officials, field teams and volunteers managing floods, shelters and supplies.
           </p>
         </div>
+        <Waves fill="#FFFFFF" className="hidden lg:block" />
       </section>
 
-      <section className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden text-center mb-8">
-            <div className="text-4xl mb-2">🛡️</div>
-            <h1 className="text-2xl font-bold text-slate-900">Suraksha Setu</h1>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
-          <p className="text-slate-500 mb-8">Sign in to continue</p>
+      <section className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white">
+        <div className="w-full max-w-sm animate-fade-in">
+          <h2 className="font-display text-2xl font-bold text-slate-900">Sign in</h2>
+          <p className="text-slate-600 mt-1 mb-7">Use the phone number you registered with.</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
-              <input
-                id="phone"
-                type="tel"
-                autoComplete="tel"
-                required
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="Enter phone number"
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <label htmlFor="phone" className="block text-sm font-semibold text-slate-800 mb-1.5">Phone number</label>
+              <input id="phone" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 98765 43210" className={field} />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter password"
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-800 mb-1.5">Password</label>
+              <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={field} />
             </div>
 
-            {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 gradient-primary text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50"
-            >
-              {loading ? "Signing in…" : "Sign In"}
+            <button type="submit" disabled={loading} className="w-full py-3 bg-ink text-white font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-50">
+              {loading ? "Signing in…" : "Sign in"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
-            Don&apos;t have an account? <Link className="text-blue-600 font-medium hover:underline" href="/register">Register</Link>
+          <p className="mt-6 text-sm text-slate-600">
+            New here? <Link className="text-blue-700 font-semibold hover:underline" href="/register">Create an account</Link>
           </p>
-          <div className="mt-8 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-700 text-center">🔒 JWT authentication • Role-based access</p>
-          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            Just need help? <Link className="text-blue-700 font-semibold hover:underline" href="/">Go to the public page</Link>
+          </p>
         </div>
       </section>
     </main>

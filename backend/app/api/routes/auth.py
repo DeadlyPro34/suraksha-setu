@@ -19,7 +19,6 @@ _PRIVILEGED_ROLES = {
     UserRole.field_officer,
     UserRole.volunteer,
     UserRole.official,
-    UserRole.admin,
 }
 
 
@@ -39,12 +38,6 @@ def _auth_response(user: User) -> AuthOut:
 
 @router.post("/signup", response_model=AuthOut, status_code=status.HTTP_201_CREATED)
 def signup(data: SignupIn, db: Session = Depends(get_db)) -> AuthOut:
-    if data.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin accounts cannot be created through public signup",
-        )
-
     if data.role in _PRIVILEGED_ROLES:
         configured_code = settings.PRIVILEGED_SIGNUP_CODE
         if not configured_code or not data.invite_code or not hmac.compare_digest(

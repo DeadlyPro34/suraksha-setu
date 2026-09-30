@@ -1,4 +1,4 @@
-import { Alert, AuthResponse, Report, ResponsePlan, ResponsePlanActions, Shelter, User } from "./types";
+import { Alert, AuthResponse, NearbyShelter, Report, ResponsePlan, ResponsePlanActions, Shelter, User } from "./types";
 
 export const fetchApi = async (path: string, options?: RequestInit) => {
   // Keep browser requests same-origin; Next.js proxies /_api to the backend.
@@ -36,7 +36,12 @@ export const fetchApi = async (path: string, options?: RequestInit) => {
   return res.json();
 };
 
-export const createReport = (report: Omit<Report, "id" | "status" | "created_at">) =>
+export const createReport = (report: {
+  type: Report["type"];
+  description: string;
+  location: { lat: number; lon: number };
+  image_url?: string;
+}) =>
   fetchApi("/api/reports/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -46,11 +51,25 @@ export const createReport = (report: Omit<Report, "id" | "status" | "created_at"
 export const getReports = (limit = 100) =>
   fetchApi(`/api/reports/?limit=${limit}`) as Promise<Report[]>;
 
+export const getMyReports = (limit = 100) =>
+  fetchApi(`/api/reports/mine?limit=${limit}`) as Promise<Report[]>;
+
+export const analyzeMyReport = (reportId: string) =>
+  fetchApi(`/api/reports/${reportId}/analyze`, { method: "POST" }) as Promise<{
+    raw_agent_outputs?: Record<string, Record<string, unknown>>;
+  }>;
+
 export const getAlerts = (limit = 100) =>
   fetchApi(`/api/alerts/?limit=${limit}`) as Promise<Alert[]>;
 
+export const getCitizenAlerts = (limit = 100) =>
+  fetchApi(`/api/alerts/nearby?limit=${limit}`) as Promise<Alert[]>;
+
 export const getShelters = (limit = 200) =>
   fetchApi(`/api/shelters/?limit=${limit}`) as Promise<Shelter[]>;
+
+export const getNearbyShelters = (lat: number, lon: number) =>
+  fetchApi(`/api/shelters/nearby?lat=${lat}&lon=${lon}`) as Promise<NearbyShelter[]>;
 
 export const runPipeline = async (incidentId: string): Promise<ResponsePlan> => {
   const options: RequestInit = {

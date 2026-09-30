@@ -7,14 +7,16 @@ import { checkHealth, getAlerts, getReports, getShelters, getResponsePlanActions
 import { getCurrentUser } from "@/lib/api";
 import { homeForRole } from "@/lib/auth";
 import { Alert, Report, ResponsePlan, ResponsePlanActions, Shelter } from "@/lib/types";
+import { BrandMark } from "@/components/Brand";
+import { Icon } from "@/components/Icons";
 
 /* ── Agent metadata ── */
 const AGENT_META: Record<string, { label: string; icon: string; color: string }> = {
-  flood_agent:          { label: "Flood Analysis",      icon: "🌊", color: "border-blue-200 bg-blue-50" },
-  road_agent:           { label: "Road Status",         icon: "🛣️", color: "border-amber-200 bg-amber-50" },
-  shelter_agent:        { label: "Shelter Finder",      icon: "🏠", color: "border-green-200 bg-green-50" },
-  resource_agent:       { label: "Resource Allocation", icon: "📦", color: "border-purple-200 bg-purple-50" },
-  misinformation_agent: { label: "Credibility Check",   icon: "🔍", color: "border-slate-200 bg-slate-50" },
+  flood_agent:          { label: "Flood analysis",      icon: "flood",  color: "border-l-blue-500" },
+  road_agent:           { label: "Road status",         icon: "road",   color: "border-l-saffron" },
+  shelter_agent:        { label: "Shelter finder",      icon: "shelter", color: "border-l-emerald-600" },
+  resource_agent:       { label: "Resource allocation", icon: "box",    color: "border-l-blue-800" },
+  misinformation_agent: { label: "Credibility check",   icon: "search", color: "border-l-slate-400" },
 };
 
 function humanize(key: string): string {
@@ -73,7 +75,7 @@ export default function OfficialDashboard() {
     getCurrentUser()
       .then((user) => {
         if (!active) return;
-        if (user.role !== "official" && user.role !== "admin") {
+        if (user.role !== "official") {
           router.replace(homeForRole(user.role));
           return;
         }
@@ -121,11 +123,12 @@ export default function OfficialDashboard() {
   const activeAlerts = alerts.filter((alert) => alert.type !== "all_clear").length;
   const openShelters = shelters.filter((shelter) => shelter.status === "open").length;
   const pendingReports = recentReports.filter((report) => report.status === "pending_verification").length;
+  const stat = (isLoading: boolean, err: string | null, n: number) => (isLoading ? "…" : err ? "—" : String(n));
   const dashboardStats = [
-    { label: "Reports Loaded (latest 100)", value: reportsLoading ? "…" : reportsError ? "—" : String(recentReports.length), icon: "📋", trend: reportsLoading ? "Loading" : reportsError ? "Unavailable" : "Database", trendType: "info" },
-    { label: "Pending Verification", value: reportsLoading ? "…" : reportsError ? "—" : String(pendingReports), icon: "⏳", trend: reportsError ? "Unavailable" : "Reports", trendType: "warning" },
-    { label: "Open Shelters", value: reportsLoading ? "…" : sheltersError ? "—" : String(openShelters), icon: "🏠", trend: sheltersError ? "Unavailable" : "Database", trendType: "success" },
-    { label: "Active Alerts (latest 100)", value: reportsLoading ? "…" : alertsError ? "—" : String(activeAlerts), icon: "📢", trend: alertsError ? "Unavailable" : "Database", trendType: "danger" },
+    { label: "Recent reports", value: stat(reportsLoading, reportsError, recentReports.length), accent: "border-t-blue-500" },
+    { label: "Pending verification", value: stat(reportsLoading, reportsError, pendingReports), accent: "border-t-saffron" },
+    { label: "Open shelters", value: stat(reportsLoading, sheltersError, openShelters), accent: "border-t-emerald-600" },
+    { label: "Active alerts", value: stat(reportsLoading, alertsError, activeAlerts), accent: "border-t-alarm" },
   ];
 
   const handleRun = async () => {
@@ -182,14 +185,14 @@ export default function OfficialDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* ── Sidebar ── */}
-      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col min-h-screen">
+      <aside className="hidden lg:flex w-64 bg-ink text-white flex-shrink-0 flex-col h-screen sticky top-0">
         {/* Logo */}
-        <div className="p-5 border-b border-slate-800">
+        <div className="p-5 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🛡️</span>
+            <BrandMark />
             <div>
               <h1 className="font-bold text-sm">Suraksha Setu</h1>
-              <p className="text-[10px] text-slate-400">Official Dashboard</p>
+              <p className="text-xs text-blue-200">Official dashboard</p>
             </div>
           </div>
         </div>
@@ -197,13 +200,13 @@ export default function OfficialDashboard() {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1">
           {[
-            { icon: "📊", label: "Dashboard", href: "/dashboard", active: true },
-            { icon: "🚨", label: "Incidents", href: "/incidents", active: false },
-            { icon: "✅", label: "Approvals", href: "/approvals", active: false },
-            { icon: "🏠", label: "Shelters", href: "/shelters", active: false },
-            { icon: "👥", label: "Teams", href: null, active: false },
-            { icon: "📦", label: "Resources", href: null, active: false },
-            { icon: "🗺️", label: "Map View", href: null, active: false },
+            { icon: "dashboard", label: "Dashboard", href: "/dashboard", active: true },
+            { icon: "incident", label: "Incidents", href: "/incidents", active: false },
+            { icon: "check", label: "Approvals", href: "/approvals", active: false },
+            { icon: "shelter", label: "Shelters", href: "/shelters", active: false },
+            { icon: "team", label: "Teams", href: null, active: false },
+            { icon: "box", label: "Resources", href: null, active: false },
+            { icon: "map", label: "Map View", href: null, active: false },
           ].map((item) => (
             item.href ? (
               <Link
@@ -212,11 +215,11 @@ export default function OfficialDashboard() {
                 aria-current={item.active ? "page" : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                   item.active
-                    ? "bg-blue-600 text-white font-medium"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-white/10 text-white font-semibold"
+                    : "text-blue-200 hover:text-white hover:bg-white/5"
                 }`}
               >
-                <span>{item.icon}</span>
+                <Icon name={item.icon} className="w-5 h-5" />
                 <span>{item.label}</span>
               </Link>
             ) : (
@@ -224,24 +227,24 @@ export default function OfficialDashboard() {
                 key={item.label}
                 aria-disabled="true"
                 title={`${item.label} page is not available yet`}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-blue-300/40 cursor-not-allowed"
               >
-                <span>{item.icon}</span>
+                <Icon name={item.icon} className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
-                <span className="text-[9px] uppercase tracking-wide text-slate-500">Soon</span>
+                <span className="text-xs text-blue-300/50">Soon</span>
               </div>
             )
           ))}
         </nav>
 
         {/* Connection status */}
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
               health === "connected" ? "bg-green-400 animate-pulse-dot" :
               health === "disconnected" ? "bg-red-400" : "bg-yellow-400"
             }`} />
-            <span className="text-xs text-slate-400">
+            <span className="text-sm text-blue-200">
               Backend: {health}
             </span>
           </div>
@@ -249,55 +252,48 @@ export default function OfficialDashboard() {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 min-w-0">
+        <nav aria-label="Sections" className="lg:hidden flex gap-1 overflow-x-auto bg-ink px-3 py-2">
+          {[["Dashboard", "/dashboard"], ["Incidents", "/incidents"], ["Approvals", "/approvals"], ["Shelters", "/shelters"]].map(([l, h]) => (
+            <Link key={l} href={h} className={`px-3 py-1.5 rounded-md text-sm whitespace-nowrap ${h === "/dashboard" ? "bg-white/15 text-white font-semibold" : "text-blue-200"}`}>{l}</Link>
+          ))}
+        </nav>
         {/* Top bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-40">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Command Center</h2>
             <p className="text-xs text-slate-500">Real-time disaster response coordination</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="badge badge-danger animate-pulse-dot">● {reportsLoading ? "…" : alertsError ? "—" : activeAlerts} Active Alerts</span>
+            <span className="badge badge-danger">{reportsLoading ? "…" : alertsError ? "—" : activeAlerts} active alerts</span>
             <div className="w-8 h-8 gradient-primary rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
-          {/* ── Stats Row ── */}
-          <div className="grid grid-cols-4 gap-4">
-            {dashboardStats.map((stat, i) => (
-              <div key={stat.label} className="card p-4 animate-fade-in" style={{ animationDelay: `${i * 0.05}s` }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl">{stat.icon}</span>
-                  <span className={`badge badge-${stat.trendType}`}>{stat.trend}</span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                <div className="text-xs text-slate-500 mt-0.5">{stat.label}</div>
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {dashboardStats.map((st) => (
+              <div key={st.label} className={`card p-4 border-t-4 ${st.accent}`}>
+                <div className="font-display text-3xl font-bold text-slate-900">{st.value}</div>
+                <div className="text-sm text-slate-600 mt-1">{st.label}</div>
               </div>
             ))}
           </div>
 
-          {/* ── Tabs ── */}
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === "overview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >Overview</button>
-            <button
-              onClick={() => setActiveTab("pipeline")}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === "pipeline" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >AI Pipeline</button>
+          <div role="tablist" className="flex gap-6 border-b border-slate-200">
+            {(["overview", "pipeline"] as const).map((t) => (
+              <button key={t} role="tab" aria-selected={activeTab === t} onClick={() => setActiveTab(t)}
+                className={`pb-2.5 -mb-px text-sm font-semibold border-b-2 ${activeTab === t ? "border-saffron text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+                {t === "overview" ? "Overview" : "AI pipeline"}
+              </button>
+            ))}
           </div>
 
           {activeTab === "overview" && (
-            <div className="grid grid-cols-3 gap-6 animate-fade-in">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-fade-in">
               {/* Recent incidents */}
-              <div className="col-span-2">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Recent Incidents</h3>
+              <div className="xl:col-span-2">
+                <h3 className="font-display text-lg font-bold text-slate-900 mb-3">Recent incidents</h3>
                 <div className="space-y-2">
                   {reportsLoading && <div role="status" className="card p-4 text-sm text-slate-500">Loading reports…</div>}
                   {reportsError && (
@@ -309,17 +305,17 @@ export default function OfficialDashboard() {
                   {!reportsLoading && !reportsError && recentReports.length === 0 && (
                     <div className="card p-4 text-sm text-slate-500">No reports have been submitted yet.</div>
                   )}
-                  {recentReports.map((inc, i) => (
-                    <div key={inc.id} className="card p-4 flex items-center justify-between animate-fade-in" style={{ animationDelay: `${i * 0.08}s` }}>
+                  {recentReports.map((inc) => (
+                    <div key={inc.id} className="card p-4 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-                          inc.type === "flood" ? "bg-blue-100" : inc.type === "road_block" ? "bg-amber-100" : "bg-red-100"
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          inc.type === "flood" ? "bg-blue-100 text-blue-800" : inc.type === "road_block" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
                         }`}>
-                          {inc.type === "flood" ? "🌊" : inc.type === "road_block" ? "🚧" : "🏥"}
+                          <Icon name={inc.type === "flood" ? "flood" : inc.type === "road_block" ? "road" : "medical"} className="w-5 h-5" />
                         </div>
                         <div>
                           <div className="font-semibold text-sm text-slate-900 capitalize">{inc.type.replace("_", " ")} report</div>
-                          <div className="text-xs text-slate-500">{inc.lat.toFixed(4)}, {inc.lon.toFixed(4)} • {new Date(inc.created_at).toLocaleString()}</div>
+                          <div className="text-xs text-slate-500">{inc.lat.toFixed(4)}, {inc.lon.toFixed(4)} — {new Date(inc.created_at).toLocaleString()}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -328,9 +324,9 @@ export default function OfficialDashboard() {
                         </span>
                         <button
                           onClick={() => { setIncidentId(inc.id); setActiveTab("pipeline"); }}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          className="text-sm text-blue-700 hover:underline font-semibold"
                         >
-                          Analyze →
+                          Analyze
                         </button>
                       </div>
                     </div>
@@ -340,11 +336,11 @@ export default function OfficialDashboard() {
 
               {/* Quick stats sidebar */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Live Updates</h3>
+                <h3 className="font-display text-lg font-bold text-slate-900 mb-3">Right now</h3>
                 <div className="card p-4">
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">Weather</div>
+                  <div className="text-sm font-semibold text-slate-700 mb-2">Weather</div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🌦️</span>
+                    <Icon name="weather" className="w-7 h-7 text-blue-700" />
                     <div>
                       <div className="font-bold text-slate-900">No live reading</div>
                       <div className="text-xs text-slate-500">Weather is checked per incident in the analysis pipeline.</div>
@@ -352,7 +348,7 @@ export default function OfficialDashboard() {
                   </div>
                 </div>
                 <div className="card p-4">
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">Shelter Availability</div>
+                  <div className="text-sm font-semibold text-slate-700 mb-2">Shelter availability</div>
                   {sheltersError && <p className="text-xs text-red-600">Could not load shelter data.</p>}
                   {!sheltersError && shelters.length === 0 && <p className="text-xs text-slate-500">No shelters registered.</p>}
                   <div className="space-y-2">
@@ -372,7 +368,7 @@ export default function OfficialDashboard() {
             <div className="space-y-6 animate-fade-in">
               {/* ── Pipeline trigger ── */}
               <div className="card p-5">
-                <h3 className="font-semibold text-slate-900 mb-3">Run Agent Pipeline</h3>
+                <h3 className="font-semibold text-slate-900 mb-3">Run the agent pipeline</h3>
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -380,14 +376,14 @@ export default function OfficialDashboard() {
                     onChange={(e) => setIncidentId(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleRun()}
                     placeholder="Enter incident ID"
-                    className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                   <button
                     onClick={handleRun}
                     disabled={loading || !incidentId.trim()}
-                    className="px-6 py-2.5 gradient-primary text-white font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20"
+                    className="px-6 py-2.5 bg-ink text-white font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-50"
                   >
-                    {loading ? "Running…" : "🤖 Run Pipeline"}
+                    {loading ? "Running…" : "Run pipeline"}
                   </button>
                 </div>
                 {error && (
@@ -403,7 +399,7 @@ export default function OfficialDashboard() {
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">AI Recommended Plan</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Generated by CrewAI Agent Pipeline</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Generated by the agent pipeline</p>
                       </div>
                       <div className={`badge border ${priorityBadge(plan.priority_score).cls}`}>
                         Priority: {plan.priority_score} — {priorityBadge(plan.priority_score).label}
@@ -411,10 +407,10 @@ export default function OfficialDashboard() {
                     </div>
                     <p className="text-sm text-slate-700 leading-relaxed mb-5">{plan.summary}</p>
 
-                    <div className="border-t border-slate-100 pt-4 flex gap-3">
+                    <div className="border-t border-slate-100 pt-4 flex flex-wrap gap-3">
                       {plan.status === "pending_approval" || !plan.status ? (
                         <>
-                          <button onClick={() => handleSubmitDecision("approved")} className="px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700">Approve</button>
+                          <button onClick={() => handleSubmitDecision("approved")} className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-semibold hover:bg-emerald-800">Approve</button>
                           {isModifying ? (
                             <div className="w-full flex gap-2">
                               <textarea
@@ -425,14 +421,14 @@ export default function OfficialDashboard() {
                                 rows={2}
                               />
                               <div className="flex flex-col gap-2">
-                                <button onClick={() => { handleSubmitDecision("modified", modifiedSummaryText); setIsModifying(false); setModifiedSummaryText(""); }} disabled={!modifiedSummaryText.trim()} className="px-3 py-1 bg-amber-500 text-white rounded text-sm hover:bg-amber-600 disabled:opacity-50">Submit</button>
+                                <button onClick={() => { handleSubmitDecision("modified", modifiedSummaryText); setIsModifying(false); setModifiedSummaryText(""); }} disabled={!modifiedSummaryText.trim()} className="px-3 py-1 bg-saffron text-ink rounded-md text-sm font-semibold disabled:opacity-50">Submit</button>
                                 <button onClick={() => { setIsModifying(false); setModifiedSummaryText(""); }} className="px-3 py-1 bg-slate-200 text-slate-700 rounded text-sm hover:bg-slate-300">Cancel</button>
                               </div>
                             </div>
                           ) : (
-                            <button onClick={() => setIsModifying(true)} className="px-4 py-2 bg-amber-500 text-white rounded font-medium hover:bg-amber-600">Modify</button>
+                            <button onClick={() => setIsModifying(true)} className="px-4 py-2 bg-saffron text-ink rounded-lg font-semibold hover:brightness-105">Modify</button>
                           )}
-                          <button onClick={() => handleSubmitDecision("rejected")} className="px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700">Reject</button>
+                          <button onClick={() => handleSubmitDecision("rejected")} className="px-4 py-2 bg-alarm text-white rounded-lg font-semibold hover:brightness-110">Reject</button>
                         </>
                       ) : (
                         <div className="p-3 bg-slate-50 border border-slate-200 rounded text-sm text-slate-700 font-medium">
@@ -451,13 +447,13 @@ export default function OfficialDashboard() {
                       <div className="mt-4 space-y-3">
                         {planActions.alerts.map((alert) => (
                           <div key={alert.id} className="rounded-lg border border-green-200 bg-white p-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-green-800">Citizen alert · {alert.type}</p>
+                            <p className="text-sm font-semibold text-green-800">Citizen alert: {humanize(alert.type)}</p>
                             <p className="mt-1 text-sm text-slate-800">{alert.message}</p>
                           </div>
                         ))}
                         {planActions.dispatches.map((dispatch) => (
                           <div key={dispatch.id} className="rounded-lg border border-blue-200 bg-white p-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Dispatch · {humanize(dispatch.target_role)} · {dispatch.status}</p>
+                            <p className="text-sm font-semibold text-blue-800">Dispatch to {humanize(dispatch.target_role)} ({dispatch.status})</p>
                             <p className="mt-1 text-sm text-slate-800">{dispatch.message}</p>
                           </div>
                         ))}
@@ -466,19 +462,19 @@ export default function OfficialDashboard() {
                   )}
 
                   {/* Agent output cards */}
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Agent Outputs</h3>
+                  <h3 className="font-display text-lg font-bold text-slate-900">Agent outputs</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {Object.entries(plan.raw_agent_outputs || {}).map(([agentName, output]) => {
-                      const meta = AGENT_META[agentName] ?? { label: humanize(agentName), icon: "🤖", color: "border-slate-200 bg-slate-50" };
+                      const meta = AGENT_META[agentName] ?? { label: humanize(agentName), icon: "bot", color: "border-l-slate-400" };
                       // Filter out raw_weather and raw_roads from display to keep cards clean
                       const displayEntries = Object.entries(output as Record<string, unknown>).filter(
                         ([k]) => !k.startsWith("raw_")
                       );
 
                       return (
-                        <div key={agentName} className={`card p-4 border ${meta.color}`}>
+                        <div key={agentName} className={`card p-4 border-l-4 ${meta.color}`}>
                       <h4 className="font-semibold text-sm mb-3 pb-2 border-b border-slate-200 flex items-center gap-2">
-                            <span className="text-lg">{meta.icon}</span>
+                            <Icon name={meta.icon} className="w-5 h-5 text-blue-700" />
                             <span className="text-slate-900">{meta.label}</span>
                           </h4>
                           <dl className="space-y-2">

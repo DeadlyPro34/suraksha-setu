@@ -17,3 +17,8 @@ class ShelterOut(BaseModel):
     has_electricity: bool
     has_medical: bool
     status: ShelterStatus
+
+
+class NearbyShelterOut(ShelterOut):
+    distance_km: float
+    capacity_pct: int

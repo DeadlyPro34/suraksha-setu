@@ -13,7 +13,6 @@ class UserRole(str, enum.Enum):
     field_officer = "field_officer"
     volunteer = "volunteer"
     official = "official"
-    admin = "admin"
 
 
 class User(Base):

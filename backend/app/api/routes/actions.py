@@ -41,7 +41,7 @@ router = APIRouter(prefix="/api/response-plans", tags=["actions"])
 def get_plan_actions(
     plan_id: UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_role("official", "admin", "field_officer")),
+    _current_user=Depends(require_role("official", "field_officer")),
 ):
     plan = db.query(ResponsePlan).filter(ResponsePlan.id == plan_id).first()
     if plan is None:
