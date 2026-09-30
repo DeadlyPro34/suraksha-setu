@@ -2,7 +2,7 @@
 const nextConfig = {};
 
 nextConfig.rewrites = async () => {
-  const backendUrl = (process.env.BACKEND_INTERNAL_URL || "http://localhost:8000").replace(/\/$/, "");
+  const backendUrl = (process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:5000").replace(/\/$/, "");
   return [
     {
       source: "/_api/:path*",
