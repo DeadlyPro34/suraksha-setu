@@ -8,6 +8,7 @@ node_modules/
 __pycache__/
 *.pyc
 backend/venv/
+backend/uploads/
 .venv/
 .venv-1/
 .venv/*.log

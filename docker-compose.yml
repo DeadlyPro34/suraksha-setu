@@ -26,8 +26,10 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-suraksha_setu}
+      MEDIA_STORAGE_DIR: /app/uploads
     volumes:
       - ./backend:/app
+      - media_data:/app/uploads
     command: ["sh", "-c", "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   frontend:
@@ -45,3 +47,4 @@ services:
 
 volumes:
   db_data:
+  media_data:
