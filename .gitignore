@@ -7,6 +7,9 @@ node_modules/
 /dist/
 __pycache__/
 *.pyc
+.pytest_cache/
+*.log
+.codex-server-logs/
 backend/venv/
 backend/uploads/
 .venv/
