@@ -31,6 +31,17 @@ export const fetchApi = async (path: string, options?: RequestInit) => {
     } catch {
       // Keep the status-based error when the response has no JSON body.
     }
+    if (
+      res.status === 401 &&
+      typeof window !== "undefined" &&
+      !path.startsWith("/api/auth/login") &&
+      !path.startsWith("/api/auth/signup")
+    ) {
+      window.localStorage.removeItem("access_token");
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login?reason=session-expired");
+      }
+    }
     throw new Error(detail);
   }
   return res.json();
@@ -54,10 +65,16 @@ export const getReports = (limit = 100) =>
 export const getMyReports = (limit = 100) =>
   fetchApi(`/api/reports/mine?limit=${limit}`) as Promise<Report[]>;
 
-export const analyzeMyReport = (reportId: string) =>
-  fetchApi(`/api/reports/${reportId}/analyze`, { method: "POST" }) as Promise<{
-    raw_agent_outputs?: Record<string, Record<string, unknown>>;
-  }>;
+export interface AnalysisResult {
+  incident_id: string;
+  response_plan_id: string;
+  priority_score: number;
+  summary: string;
+  raw_agent_outputs?: Record<string, Record<string, unknown>>;
+}
+
+export const analyzeReport = (reportId: string) =>
+  fetchApi(`/api/reports/${reportId}/analyze`, { method: "POST" }) as Promise<AnalysisResult>;
 
 export const getAlerts = (limit = 100) =>
   fetchApi(`/api/alerts/?limit=${limit}`) as Promise<Alert[]>;
