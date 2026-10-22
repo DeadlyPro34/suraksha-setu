@@ -12,14 +12,18 @@ const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: "▦" },
   { label: "Incidents", href: "/incidents", icon: "△" },
   { label: "Approvals", href: "/approvals", icon: "✓" },
+  { label: "Volunteers", href: "/volunteers", icon: "♧" },
   { label: "Shelters", href: "/official/shelters", icon: "⌂" },
+  { label: "Map", href: "/map", icon: "⌖" },
 ];
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Command Center", subtitle: "Disaster response overview" },
   "/incidents": { title: "Incident reports", subtitle: "Review reports and start an analysis" },
   "/approvals": { title: "Plan approvals", subtitle: "Review response plans and assign field work" },
+  "/volunteers": { title: "Volunteer coordination", subtitle: "Create volunteer tasks and manage staffing" },
   "/official/shelters": { title: "Shelter directory", subtitle: "Check capacity and available support" },
+  "/map": { title: "Response map", subtitle: "Live view of alerts and shelter locations" },
 };
 
 export default function OfficialLayout({ children }: { children: ReactNode }) {

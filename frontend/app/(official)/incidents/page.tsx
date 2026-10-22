@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { analyzeReport, getReports } from "@/lib/api";
 import { Report } from "@/lib/types";
+import { ReportMedia } from "@/components/ReportMedia";
 
 const typeIcon: Record<string, string> = { flood: "🌊", road_block: "🚧", medical: "🏥", other: "⚠️" };
 const reportStatus: Record<string, string> = {
@@ -66,6 +67,9 @@ export default function IncidentsPage() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold capitalize text-slate-900">{report.type.replace(/_/g, " ")} report</h3><span className={`badge capitalize ${reportStatus[report.status] || "badge-neutral"}`}>{report.status.replace(/_/g, " ")}</span>{report.verification_result && <span className="badge badge-info">Check: {report.verification_result}</span>}</div>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{report.description}</p>
+              {report.image_url && (report.image_url.startsWith("/api/media/")
+                ? <ReportMedia url={report.image_url} />
+                : <a className="mt-3 inline-block text-sm font-semibold text-blue-700 underline" href={report.image_url} target="_blank" rel="noreferrer">Open attached media</a>)}
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500"><span>📍 {report.lat.toFixed(5)}, {report.lon.toFixed(5)}</span><span>{new Date(report.created_at).toLocaleString()}</span><span className="break-all">ID: {report.id}</span></div>
             </div>
           </div>
