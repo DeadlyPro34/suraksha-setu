@@ -6,7 +6,8 @@ alembic
 psycopg2-binary
 geoalchemy2
 httpx
-groq
+langchain-core
+langchain-groq
 shapely
 PyJWT
 bcrypt

@@ -1,39 +1,70 @@
-# Suraksha Setu Monorepo
+# Suraksha Setu
 
-This repository contains the foundation for the Suraksha Setu project, a monorepo with separate front‑end and back‑end services.
+Suraksha Setu is a disaster-response demo with citizen incident reporting, a five-agent analysis workflow coordinated through LangChain and Groq, official review, simulated alerts and dispatches, and field-officer assignment acknowledgement.
 
-## Setup Instructions
+## Run the full demo with Docker Compose
 
-### Backend (FastAPI)
-Navigate to the `backend` folder and start the API:
-```bash
+Prerequisites: Docker Desktop with Compose enabled. From the repository root:
+
+```powershell
+if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+```
+
+Edit `backend/.env` and set `JWT_SECRET` to a random value of at least 32 characters, set a private `PRIVILEGED_SIGNUP_CODE`, and optionally set `GROQ_API_KEY`. Without a Groq key, the analysis workflow uses its explicit manual-review fallback. Do not commit `.env` files.
+
+Then start the application:
+
+```powershell
+docker compose up --build
+```
+
+Compose starts PostGIS, waits for the database health check, runs all Alembic migrations and the idempotent demo-data seed, then starts FastAPI and Next.js. Open [http://localhost:3000](http://localhost:3000). The backend is available at [http://localhost:8000](http://localhost:8000), with API documentation at `/docs`.
+
+To stop the services, press Ctrl+C. `docker compose down` stops them and keeps the database volume. `docker compose down -v` also deletes the local demo database.
+
+## Demo flow
+
+1. Register a citizen account and submit an incident with a description and map location.
+2. Register an official account at `/register` with the private invite code from `backend/.env`.
+3. As an official, open Incidents and select **Analyze report**. The result is saved as a pending response plan. A report compared only with an incident derived from itself remains uncertain; that self-match is not shown as independent verification.
+4. Open Approvals and approve or reject the plan. Approval records a simulated alert and dispatch.
+5. Register a field-officer account with the same invite code. As the official, assign the new dispatch to that officer.
+6. Sign in as the officer and acknowledge the assignment from **My assignments**.
+
+Reports, plans, decisions, verification results, and dispatch state are stored in the local PostGIS database. Alerts and resource/dispatch actions are demo records; the app does not send SMS, call emergency services, or physically dispatch responders.
+
+## Run services separately
+
+For local development without Compose, start a PostGIS-compatible PostgreSQL database, set `DATABASE_URL`, `JWT_SECRET`, `PRIVILEGED_SIGNUP_CODE`, and optionally `GROQ_API_KEY` in `backend/.env`, then:
+
+```powershell
 cd backend
-# Create and activate virtual environment (Windows)
-python -m venv venv
-venv\Scripts\activate
-# Install dependencies
-pip install -r requirements.txt
-# Run the FastAPI server
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+alembic upgrade head
+python -m app.db.seed
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 5000
 ```
-The backend API will run on `http://127.0.0.1:5000`.
 
-### Frontend (Next.js)
-Navigate to the `frontend` folder and start the web app:
-```bash
+In a second terminal:
+
+```powershell
 cd frontend
-# Install Node dependencies (using legacy peer deps due to Next/Tailwind versions)
-npm install --legacy-peer-deps
-# Start the development server
+npm install
 npm run dev
 ```
-The frontend application will run on `http://localhost:3000` (or `3001` if `3000` is busy). Its API proxy defaults to `http://127.0.0.1:5000`; set `BACKEND_INTERNAL_URL` in `frontend/.env.local` only if the backend uses a different address.
 
----
+Next.js proxies browser API calls to `http://127.0.0.1:5000` by default. Set `BACKEND_INTERNAL_URL` if the API is at another address.
 
-- **frontend/** – Next.js 14+ (App Router) with TypeScript, Tailwind CSS, and ESLint.
-- **backend/** – FastAPI (Python 3.11+) with requirements.
-- **docs/** – Architecture documentation (stub).
-- Docker Compose configuration to run the services together.
+## Stack
 
-> **Note**: This is a scaffold only. Business logic, authentication, and agent logic will be added later.
+- Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS.
+- API: FastAPI, SQLAlchemy, Alembic, PostgreSQL/PostGIS.
+- Analysis: domain-specific Python agents coordinated through LangChain's Groq integration, with validated structured output and a deterministic manual-review fallback.
+
+## Notes
+
+- Privileged roles (official, field officer, volunteer) require the invite code; citizen signup does not.
+- Analysis is decision support. Officials must review plans before simulated actions are recorded.
+- See `docs/architecture.md` for the current architecture.

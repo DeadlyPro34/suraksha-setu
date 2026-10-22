@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getReports } from "@/lib/api";
+import { getReports, runPipeline } from "@/lib/api";
 import { Report } from "@/lib/types";
 
 const typeIcon: Record<string, string> = { flood: "🌊", road_block: "🚧", medical: "🏥", other: "⚠️" };
@@ -11,6 +11,8 @@ export default function IncidentsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyReport, setBusyReport] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -23,6 +25,20 @@ export default function IncidentsPage() {
       setLoading(false);
     }
   }, []);
+
+  const analyze = async (reportId: string) => {
+    setBusyReport(reportId);
+    setError(null);
+    setNotice(null);
+    try {
+      const plan = await runPipeline(reportId);
+      setNotice(`Response plan ${plan.status.replace(/_/g, " ")} and ready for review in Approvals.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not analyze this report.");
+    } finally {
+      setBusyReport(null);
+    }
+  };
 
   useEffect(() => {
     void loadReports();
@@ -71,6 +87,7 @@ export default function IncidentsPage() {
         </header>
 
         <div className="p-6 space-y-3">
+          {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice} <Link className="font-semibold underline" href="/approvals">Review plan</Link></p>}
           {loading && <div role="status" className="card p-5 text-sm text-slate-500">Loading reports…</div>}
           {error && (
             <div role="alert" className="card p-5 text-sm text-red-700">
@@ -107,6 +124,17 @@ export default function IncidentsPage() {
                   }`}>
                     {inc.status.replace(/_/g, " ")}
                   </span>
+                  {inc.verification_result && (
+                    <span className={`badge ${
+                      inc.verification_result === "verified" ? "badge-success" :
+                      inc.verification_result === "rejected" ? "badge-danger" : "badge-warning"
+                    }`}>
+                      Check: {inc.verification_result}
+                    </span>
+                  )}
+                  <button disabled={busyReport === inc.id} onClick={() => void analyze(inc.id)} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
+                    {busyReport === inc.id ? "Analyzing…" : "Analyze report"}
+                  </button>
                 </div>
               </div>
             </div>

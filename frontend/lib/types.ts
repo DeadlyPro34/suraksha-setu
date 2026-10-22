@@ -18,6 +18,7 @@ export interface Report {
   lon: number;
   status: "pending_verification" | "verified" | "rejected";
   created_at: string;
+  verification_result: "verified" | "rejected" | "uncertain" | null;
 }
 export interface Incident {}
 export interface Shelter {
@@ -37,11 +38,19 @@ export interface NearbyShelter extends Shelter {
   distance_km: number;
   capacity_pct: number;
 }
-export interface Resource {}
+export interface Resource {
+  id: string;
+  incident_id: string | null;
+  type: "medical" | "food" | "water" | "boat" | "personnel";
+  quantity: number;
+  lat: number | null;
+  lon: number | null;
+  status: "available" | "allocated" | "depleted";
+}
 
 export interface ResponsePlan {
-  id?: string;
-  status?: string;
+  id: string;
+  status: string;
   priority_score: number;
   summary: string;
   raw_agent_outputs: {
@@ -52,6 +61,17 @@ export interface ResponsePlan {
     misinformation_agent?: Record<string, any>;
     [key: string]: any;
   };
+}
+
+export interface ResponsePlanSummary {
+  id: string;
+  incident_id: string;
+  report_id: string | null;
+  report_description: string | null;
+  priority_score: number;
+  summary: string;
+  status: "pending_approval" | "approved" | "rejected" | "modified";
+  generated_at: string;
 }
 
 export interface Approval {}
@@ -67,6 +87,10 @@ export interface Alert {
 export interface Dispatch {
   id: string;
   response_plan_id: string;
+  incident_id: string | null;
+  report_id: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
   target_role: "field_officer" | "volunteer" | "official";
   message: string;
   status: "pending" | "sent" | "acknowledged";

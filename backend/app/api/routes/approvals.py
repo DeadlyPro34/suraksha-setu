@@ -1,16 +1,47 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.dependencies import require_role
 from app.db.session import get_db
-from app.schemas.approval import ApprovalCreate, ApprovalOut
+from app.schemas.approval import ApprovalCreate, ApprovalOut, ResponsePlanSummary
 from app.models.approval import Approval, ApprovalDecision
 from app.models.response_plan import ResponsePlan, PlanStatus
 from app.models.user import User
 from app.services.notifications.action_service import trigger_action
 
 router = APIRouter(prefix="/api/response-plans", tags=["approvals"])
+
+
+@router.get("/", response_model=list[ResponsePlanSummary])
+def list_response_plans(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official")),
+):
+    plans = (
+        db.query(ResponsePlan)
+        .order_by(ResponsePlan.generated_at.desc(), ResponsePlan.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        ResponsePlanSummary(
+            id=plan.id,
+            incident_id=plan.incident_id,
+            report_id=plan.incident.report_id if plan.incident else None,
+            report_description=(
+                plan.incident.report.description
+                if plan.incident and plan.incident.report
+                else None
+            ),
+            priority_score=plan.priority_score,
+            summary=plan.summary,
+            status=plan.status.value,
+            generated_at=plan.generated_at,
+        )
+        for plan in plans
+    ]
 
 @router.post("/{plan_id}/decision", response_model=ApprovalOut)
 def submit_decision(
@@ -30,6 +61,12 @@ def submit_decision(
     if not plan:
         raise HTTPException(status_code=404, detail="ResponsePlan not found")
 
+    if plan.status != PlanStatus.pending_approval:
+        raise HTTPException(
+            status_code=409,
+            detail="A decision has already been recorded for this response plan",
+        )
+
     modified_summary = (data.modified_summary or "").strip()
     if data.decision == "modified" and not modified_summary:
         raise HTTPException(
@@ -37,28 +74,16 @@ def submit_decision(
             detail="modified_summary is required for a modified decision",
         )
 
-    approval = (
-        db.query(Approval)
-        .filter(Approval.response_plan_id == plan_id)
-        .first()
+    approval = Approval(
+        id=uuid.uuid4(),
+        response_plan_id=plan_id,
+        approved_by=current_user.id,
+        decision=ApprovalDecision(data.decision),
+        notes=data.notes,
+        modified_summary=modified_summary or None,
+        decided_at=datetime.now(timezone.utc),
     )
-    if approval:
-        approval.approved_by = current_user.id
-        approval.decision = ApprovalDecision(data.decision)
-        approval.notes = data.notes
-        approval.modified_summary = modified_summary or None
-        approval.decided_at = datetime.now(timezone.utc)
-    else:
-        approval = Approval(
-            id=uuid.uuid4(),
-            response_plan_id=plan_id,
-            approved_by=current_user.id,
-            decision=ApprovalDecision(data.decision),
-            notes=data.notes,
-            modified_summary=modified_summary or None,
-            decided_at=datetime.now(timezone.utc),
-        )
-        db.add(approval)
+    db.add(approval)
 
     # Approval, plan status, and first action batch commit atomically.
     plan.status = PlanStatus(data.decision)
@@ -75,7 +100,11 @@ def submit_decision(
 
 
 @router.get("/{plan_id}/decision", response_model=ApprovalOut)
-def get_decision(plan_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_decision(
+    plan_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official")),
+):
     approval = db.query(Approval).filter(Approval.response_plan_id == plan_id).first()
     if not approval:
         raise HTTPException(status_code=404, detail="Decision not found")

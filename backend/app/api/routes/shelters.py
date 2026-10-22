@@ -18,6 +18,7 @@ def list_shelters(
     db: Session = Depends(get_db),
 ):
     """Return registered shelters with availability derived from occupancy."""
+    # Deliberately public: shelter availability is non-sensitive safety information.
     shelters = db.query(Shelter).order_by(Shelter.name.asc()).limit(limit).all()
     result = []
     for shelter in shelters:

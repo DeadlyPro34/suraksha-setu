@@ -16,6 +16,7 @@ def list_resources(
     db: Session = Depends(get_db),
 ):
     """List registered resources with coordinates when present."""
+    # Deliberately public: registered resource availability is safety information.
     resources = (
         db.query(Resource)
         .order_by(Resource.type.asc(), Resource.id.asc())

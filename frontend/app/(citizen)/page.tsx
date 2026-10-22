@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ReactNode } from "react";
 import Link from "next/link";
-import { analyzeMyReport, checkHealth, getCitizenAlerts, getMyReports, getShelters } from "@/lib/api";
+import { checkHealth, getCitizenAlerts, getMyReports, getShelters } from "@/lib/api";
 import { Alert, Report, Shelter } from "@/lib/types";
 import { BrandMark, Waves } from "@/components/Brand";
 
@@ -39,8 +39,6 @@ export default function CitizenHome() {
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [sheltersError, setSheltersError] = useState<string | null>(null);
   const [reportsError, setReportsError] = useState<string | null>(null);
-  const [verification, setVerification] = useState<Record<string, string>>({});
-  const [verifyingReportId, setVerifyingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -64,27 +62,6 @@ export default function CitizenHome() {
     { n: val(loading, sheltersError, openShelterCount), label: "shelters open" },
     { n: val(loading, reportsError, reports.length), label: "recent reports" },
   ];
-
-  const verifyReport = async (reportId: string) => {
-    setVerifyingReportId(reportId);
-    setVerification((current) => ({ ...current, [reportId]: "Checking report timestamp and location…" }));
-    try {
-      const result = await analyzeMyReport(reportId);
-      const output = result.raw_agent_outputs?.misinformation_agent;
-      const credibility = output?.credibility_score;
-      const status = output?.verification_status;
-      setVerification((current) => ({
-        ...current,
-        [reportId]: typeof credibility === "number"
-          ? `Checked · credibility ${credibility.toFixed(2)} · ${String(status ?? "")}`
-          : `Check complete · ${String(status ?? "details unavailable")}`,
-      }));
-    } catch (err) {
-      setVerification((current) => ({ ...current, [reportId]: err instanceof Error ? err.message : "Could not check report." }));
-    } finally {
-      setVerifyingReportId(null);
-    }
-  };
 
   return (
     <div className="min-h-screen">
@@ -182,10 +159,6 @@ export default function CitizenHome() {
                   <h3 className="font-semibold text-slate-900 capitalize">{report.type.replace(/_/g, " ")}</h3>
                   <p className="text-slate-600 mt-0.5">{report.description}</p>
                   <p className="text-xs text-slate-500 mt-1.5">{report.lat.toFixed(4)}, {report.lon.toFixed(4)} — {new Date(report.created_at).toLocaleString()}</p>
-                  <button type="button" disabled={verifyingReportId === report.id} onClick={() => void verifyReport(report.id)} className="mt-2 text-xs font-medium text-blue-700 hover:underline disabled:opacity-50">
-                    {verifyingReportId === report.id ? "Checking…" : "Run timestamp and location checks"}
-                  </button>
-                  {verification[report.id] && <p role="status" className="text-xs text-slate-600 mt-1">{verification[report.id]}</p>}
                 </div>
                 <span className={`badge shrink-0 ${report.status === "verified" ? "badge-success" : report.status === "rejected" ? "badge-danger" : "badge-warning"}`}>
                   {report.status.replace(/_/g, " ")}

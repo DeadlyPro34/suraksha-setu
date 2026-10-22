@@ -26,6 +26,7 @@ class ReportOut(BaseModel):
     lon: float
     status: ReportStatus
     created_at: datetime
+    verification_result: Optional[str] = None
     
     class Config:
         from_attributes = True

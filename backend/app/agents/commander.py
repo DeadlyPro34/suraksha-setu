@@ -1,12 +1,15 @@
 """Run the domain agents and use Groq to coordinate their response plan."""
 
-import json
 import logging
 import math
 import re
 from typing import Any, Dict
 
-from groq import Groq
+import json
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from pydantic import BaseModel, Field
 
 from app.agents.flood_agent import FloodAgent
 from app.agents.road_agent import RoadAgent
@@ -38,6 +41,13 @@ _agents = [
 ]
 
 
+class _ResponsePlanOutput(BaseModel):
+    """Validated structured response emitted by the LangChain coordinator."""
+
+    priority_score: float = Field(description="Urgency from 0 to 10")
+    summary: str = Field(description="Concise, actionable response summary")
+
+
 def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
     """Ask Groq to assess the mocked domain-agent findings safely."""
     if not settings.GROQ_API_KEY:
@@ -48,52 +58,27 @@ def _coordinate_with_groq(agent_outputs: Dict[str, Any]) -> tuple[float, str]:
         key: agent_outputs.get(key, {"status": "no output"})
         for key in _AGENT_KEYS
     }
-    prompt = "Agent findings (JSON):\n" + json.dumps(
-        structured_findings, ensure_ascii=False, sort_keys=True, default=str
-    )
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "Act as a disaster response coordinator. Use only supplied agent findings; do not invent locations, teams, resources, or ETAs. Return a priority score from 0 to 10 and a concise actionable summary. The summary must be no more than 2 sentences and under 40 words. Higher scores mean greater urgency."),
+        ("human", "Agent findings (JSON):\n{findings}"),
+    ])
 
     try:
         logger.info("Commander Groq request fired (model=%s)", _MODEL)
-        client = Groq(api_key=settings.GROQ_API_KEY, timeout=10.0, max_retries=0)
-        response = client.chat.completions.create(
+        llm = ChatGroq(
             model=_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Act as a disaster response coordinator. Use only the supplied agent findings; "
-                        "do not invent locations, teams, resources, or ETAs. Return a priority_score "
-                        "from 0 to 10 and a concise, actionable summary. The summary must be "
-                        "no more than 2 sentences and under 40 words. "
-                        "Higher scores mean greater urgency."
-                    ),
-                },
-                {"role": "user", "content": prompt},
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "disaster_response_plan",
-                    "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "priority_score": {"type": "number"},
-                            "summary": {"type": "string"},
-                        },
-                        "required": ["priority_score", "summary"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
+            api_key=settings.GROQ_API_KEY,
+            timeout=10.0,
+            max_retries=0,
             temperature=0.2,
-            max_completion_tokens=800,
         )
-        raw_content = response.choices[0].message.content or ""
-        logger.info("Commander Groq raw response: %s", raw_content)
-        result = json.loads(raw_content)
-        score = float(result["priority_score"])
-        summary = result["summary"]
+        result = (prompt | llm.with_structured_output(_ResponsePlanOutput)).invoke({
+            "findings": json.dumps(
+                structured_findings, ensure_ascii=False, sort_keys=True, default=str
+            )
+        })
+        score = float(result.priority_score)
+        summary = result.summary
         if not math.isfinite(score) or not 0 <= score <= 10:
             raise ValueError("priority_score must be a finite number from 0 to 10")
         if not isinstance(summary, str) or not summary.strip():
