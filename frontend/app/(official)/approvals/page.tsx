@@ -77,14 +77,11 @@ export default function ApprovalsPage() {
   const decided = plans.filter((plan) => plan.status !== "pending_approval");
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div><h1 className="text-2xl font-bold text-slate-900">Plan approvals</h1><p className="text-sm text-slate-500 mt-1">Review AI plans and route approved work to a field officer.</p></div>
-          <Link className="text-sm text-blue-700 font-semibold hover:underline" href="/incidents">View incident reports</Link>
-        </div>
-      </header>
-      <div className="max-w-5xl mx-auto p-6 space-y-8">
+    <div className="mx-auto max-w-6xl space-y-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-600">Review AI-generated plans before approving field work.</p>
+        <Link className="text-sm font-semibold text-blue-700 hover:underline" href="/incidents">View incident reports →</Link>
+      </div>
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
 
@@ -112,7 +109,6 @@ export default function ApprovalsPage() {
           <h2 className="text-lg font-bold text-slate-900 mb-3">Recorded decisions</h2>
           {decided.length === 0 ? <p className="card p-4 text-sm text-slate-500">No decisions have been recorded yet.</p> : <div className="space-y-2">{decided.map((plan) => <article key={plan.id} className="card p-4 flex items-center justify-between gap-4"><div><h3 className="font-medium text-slate-800">{plan.report_description || `Incident ${plan.incident_id}`}</h3><p className="text-sm text-slate-500 mt-1">{plan.summary}</p></div><span className="badge capitalize">{plan.status.replace(/_/g, " ")}</span></article>)}</div>}
         </section>
-      </div>
-    </main>
+    </div>
   );
 }
