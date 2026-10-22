@@ -10,6 +10,7 @@ from app.schemas.resource import ResourceOut
 router = APIRouter(prefix="/api/resources", tags=["resources"])
 
 
+@router.get("", response_model=list[ResourceOut], include_in_schema=False)
 @router.get("/", response_model=list[ResourceOut])
 def list_resources(
     limit: int = Query(default=200, ge=1, le=500),

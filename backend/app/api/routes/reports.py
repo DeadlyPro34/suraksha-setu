@@ -35,6 +35,7 @@ def _report_out(db_report: Report) -> ReportOut:
     )
 
 
+@router.get("", response_model=list[ReportOut], include_in_schema=False)
 @router.get("/", response_model=list[ReportOut])
 def list_reports(
     limit: int = Query(default=100, ge=1, le=500),
@@ -69,6 +70,12 @@ def list_my_reports(
     return [_report_out(report) for report in reports]
 
 
+@router.post(
+    "",
+    response_model=ReportOut,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 @router.post(
     "/",
     response_model=ReportOut,

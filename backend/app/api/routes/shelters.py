@@ -12,6 +12,7 @@ from app.services.shelter_lookup import haversine_km
 router = APIRouter(prefix="/api/shelters", tags=["shelters"])
 
 
+@router.get("", response_model=list[ShelterOut], include_in_schema=False)
 @router.get("/", response_model=list[ShelterOut])
 def list_shelters(
     limit: int = Query(default=200, ge=1, le=500),

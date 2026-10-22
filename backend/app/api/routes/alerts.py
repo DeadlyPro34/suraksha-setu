@@ -11,6 +11,7 @@ from app.core.dependencies import require_role
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
+@router.get("", response_model=list[AlertOut], include_in_schema=False)
 @router.get("/", response_model=list[AlertOut])
 def list_alerts(
     limit: int = Query(default=100, ge=1, le=500),

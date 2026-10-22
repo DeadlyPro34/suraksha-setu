@@ -13,6 +13,7 @@ from app.services.notifications.action_service import trigger_action
 router = APIRouter(prefix="/api/response-plans", tags=["approvals"])
 
 
+@router.get("", response_model=list[ResponsePlanSummary], include_in_schema=False)
 @router.get("/", response_model=list[ResponsePlanSummary])
 def list_response_plans(
     limit: int = Query(default=100, ge=1, le=500),
