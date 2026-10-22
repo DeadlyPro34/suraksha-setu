@@ -14,3 +14,8 @@ class AlertOut(BaseModel):
     message: str
     language: str
     sent_at: datetime | None
+
+
+class AlertMapOut(AlertOut):
+    lat: float | None = None
+    lon: float | None = None

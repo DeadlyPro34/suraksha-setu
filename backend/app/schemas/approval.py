@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ApprovalCreate(BaseModel):
     decision: Literal["approved", "rejected", "modified"]
@@ -38,6 +38,18 @@ class FieldOfficerOut(BaseModel):
     name: str
 
 
+class VolunteerOut(BaseModel):
+    id: UUID
+    name: str
+    phone: str
+
+
+class VolunteerTaskCreate(BaseModel):
+    response_plan_id: UUID
+    message: str = Field(min_length=5, max_length=2000)
+    volunteers_needed: int = Field(default=1, ge=1, le=25)
+
+
 class DispatchAssignmentIn(BaseModel):
     user_id: UUID
 
@@ -52,7 +64,17 @@ class DispatchAssignmentOut(BaseModel):
     message: str
     status: str
     dispatched_at: Optional[datetime]
+    target_role: str
+    task_group_id: Optional[UUID] = None
+    volunteers_needed: int = 1
+    volunteers_assigned: int = 1
+    completion_note: Optional[str] = None
+    completed_at: Optional[datetime] = None
 
 
 class DispatchStatusIn(BaseModel):
     status: Literal["acknowledged"]
+
+
+class VolunteerCompletionIn(BaseModel):
+    completion_note: str = Field(min_length=1, max_length=2000)
