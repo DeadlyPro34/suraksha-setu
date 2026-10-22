@@ -29,6 +29,7 @@ def _report_out(db_report: Report) -> ReportOut:
         lon=shape.x,
         status=db_report.status,
         created_at=db_report.created_at,
+        image_url=db_report.image_url,
         verification_result=(
             db_report.verification.result.value if db_report.verification else None
         ),
