@@ -13,6 +13,7 @@ const navigation = [
   { label: "Incidents", href: "/incidents", icon: "△" },
   { label: "Approvals", href: "/approvals", icon: "✓" },
   { label: "Volunteers", href: "/volunteers", icon: "♧" },
+  { label: "Stock reports", href: "/resource-reports", icon: "▤" },
   { label: "Shelters", href: "/official/shelters", icon: "⌂" },
   { label: "Map", href: "/map", icon: "⌖" },
 ];
@@ -22,6 +23,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/incidents": { title: "Incident reports", subtitle: "Review reports and start an analysis" },
   "/approvals": { title: "Plan approvals", subtitle: "Review response plans and assign field work" },
   "/volunteers": { title: "Volunteer coordination", subtitle: "Create volunteer tasks and manage staffing" },
+  "/resource-reports": { title: "Stock reports", subtitle: "Review field counts before updating shared inventory" },
   "/official/shelters": { title: "Shelter directory", subtitle: "Check capacity and available support" },
   "/map": { title: "Response map", subtitle: "Live view of alerts and shelter locations" },
 };
