@@ -117,6 +117,7 @@ def seed_resources() -> tuple[int, int]:
                     Resource(
                         type=data["type"],
                         quantity=data["quantity"],
+                        location_name="Ahmedabad regional depot",
                         incident_id=None,
                         status=ResourceStatus.available,
                         location=WKTElement(

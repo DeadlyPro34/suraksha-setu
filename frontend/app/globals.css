@@ -1,3 +1,5 @@
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -39,6 +41,13 @@ h1, h2, h3 { font-family: var(--font-display), var(--font-body), sans-serif; let
 .animate-slide-in { animation: rise .3s ease-out both; }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 .wave-drift { animation: drift 24s linear infinite; }
+
+.response-map-marker { background: transparent; border: 0; }
+.response-map-marker span { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 3px solid white; border-radius: 50% 50% 50% 0; color: white; font-size: 16px; font-weight: 800; box-shadow: 0 2px 8px #0f172a55; transform: rotate(-45deg); }
+.volunteer-large-text .volunteer-readable { font-size: 1.05rem !important; line-height: 1.6; }
+.volunteer-large-text .volunteer-task-title { font-size: 1.45rem !important; line-height: 1.35; }
+.volunteer-large-text .volunteer-date { font-size: 1.1rem !important; line-height: 1.45; }
+.response-map-marker span i { font-style: normal; transform: rotate(45deg); }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in, .animate-slide-in, .animate-pulse-dot, .wave-drift { animation: none; }

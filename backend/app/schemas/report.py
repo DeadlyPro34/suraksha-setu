@@ -27,6 +27,7 @@ class ReportOut(BaseModel):
     status: ReportStatus
     created_at: datetime
     verification_result: Optional[str] = None
+    image_url: Optional[str] = None
     
     class Config:
         from_attributes = True

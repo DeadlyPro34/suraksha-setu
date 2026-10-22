@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, String, Enum
+from sqlalchemy import Boolean, Column, String, Enum, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base, pk_uuid, created_at_col
@@ -25,6 +25,10 @@ class User(Base):
     role = Column(Enum(UserRole, name="user_role"), nullable=False)
     password_hash = Column(String, nullable=False)
     created_at = created_at_col()
+    volunteer_available = Column(Boolean, nullable=False, default=False, server_default="false")
+    volunteer_skills = Column(Text, nullable=True)
+    volunteer_languages = Column(Text, nullable=True)
+    volunteer_has_transport = Column(Boolean, nullable=False, default=False, server_default="false")
 
     # --- relationships ---
     reports = relationship("Report", back_populates="reporter")

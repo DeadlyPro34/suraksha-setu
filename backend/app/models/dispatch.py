@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -19,6 +19,10 @@ class DispatchStatus(str, enum.Enum):
     pending = "pending"
     sent = "sent"
     acknowledged = "acknowledged"
+    completed = "completed"
+    en_route = "en_route"
+    arrived = "arrived"
+    needs_help = "needs_help"
 
 
 class Dispatch(Base):
@@ -29,6 +33,17 @@ class Dispatch(Base):
         UUID(as_uuid=True), ForeignKey("response_plans.id"), nullable=False
     )
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    task_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    volunteers_needed = Column(Integer, nullable=False, default=1, server_default="1")
+    completion_note = Column(Text, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    completion_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    shift_starts_at = Column(DateTime(timezone=True), nullable=True)
+    shift_ends_at = Column(DateTime(timezone=True), nullable=True)
+    checked_in_at = Column(DateTime(timezone=True), nullable=True)
+    checked_out_at = Column(DateTime(timezone=True), nullable=True)
+    missed_checkin_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    meeting_point = Column(Text, nullable=True)
     target_role = Column(
         Enum(DispatchTargetRole, name="dispatch_target_role"), nullable=False
     )

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    setSessionExpired(new URLSearchParams(window.location.search).get("reason") === "session-expired");
+  }, []);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,6 +59,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm animate-fade-in">
           <h2 className="font-display text-2xl font-bold text-slate-900">Sign in</h2>
           <p className="text-slate-600 mt-1 mb-7">Use the phone number you registered with.</p>
+
+          {sessionExpired && <p role="status" className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Your session expired. Sign in again to continue.</p>}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>

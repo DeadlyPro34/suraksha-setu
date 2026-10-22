@@ -29,12 +29,14 @@ def _report_out(db_report: Report) -> ReportOut:
         lon=shape.x,
         status=db_report.status,
         created_at=db_report.created_at,
+        image_url=db_report.image_url,
         verification_result=(
             db_report.verification.result.value if db_report.verification else None
         ),
     )
 
 
+@router.get("", response_model=list[ReportOut], include_in_schema=False)
 @router.get("/", response_model=list[ReportOut])
 def list_reports(
     limit: int = Query(default=100, ge=1, le=500),
@@ -69,6 +71,12 @@ def list_my_reports(
     return [_report_out(report) for report in reports]
 
 
+@router.post(
+    "",
+    response_model=ReportOut,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 @router.post(
     "/",
     response_model=ReportOut,
