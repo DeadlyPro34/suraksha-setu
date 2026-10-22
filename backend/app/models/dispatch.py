@@ -20,6 +20,9 @@ class DispatchStatus(str, enum.Enum):
     sent = "sent"
     acknowledged = "acknowledged"
     completed = "completed"
+    en_route = "en_route"
+    arrived = "arrived"
+    needs_help = "needs_help"
 
 
 class Dispatch(Base):
@@ -34,6 +37,13 @@ class Dispatch(Base):
     volunteers_needed = Column(Integer, nullable=False, default=1, server_default="1")
     completion_note = Column(Text, nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
+    completion_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    shift_starts_at = Column(DateTime(timezone=True), nullable=True)
+    shift_ends_at = Column(DateTime(timezone=True), nullable=True)
+    checked_in_at = Column(DateTime(timezone=True), nullable=True)
+    checked_out_at = Column(DateTime(timezone=True), nullable=True)
+    missed_checkin_acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    meeting_point = Column(Text, nullable=True)
     target_role = Column(
         Enum(DispatchTargetRole, name="dispatch_target_role"), nullable=False
     )

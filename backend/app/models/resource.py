@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, Integer, Enum, ForeignKey
+from sqlalchemy import Column, Integer, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
@@ -33,6 +33,7 @@ class Resource(Base):
     )
     type = Column(Enum(ResourceType, name="resource_type"), nullable=False)
     quantity = Column(Integer, nullable=False)
+    location_name = Column(String(200), nullable=False, default="Regional stock", server_default="Regional stock")
     location = Column(Geometry("POINT", srid=4326), nullable=True)
     status = Column(
         Enum(ResourceStatus, name="resource_status"),
