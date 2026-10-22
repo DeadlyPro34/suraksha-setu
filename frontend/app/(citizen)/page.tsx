@@ -1,10 +1,16 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { checkHealth, getCitizenAlerts, getMyReports, getShelters } from "@/lib/api";
 import { Alert, Report, Shelter } from "@/lib/types";
 import { BrandMark, Waves } from "@/components/Brand";
+
+const ResponseMap = dynamic(() => import("@/components/ResponseMap").then((module) => module.ResponseMap), {
+  ssr: false,
+  loading: () => <div className="flex min-h-[360px] items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-500">Loading safety map…</div>,
+});
 
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
@@ -17,6 +23,8 @@ const ACTIONS = [
     icon: <Icon><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M10 20v-5h4v5" /></Icon> },
   { label: "Read alerts", desc: "Warnings and evacuation notices", href: "#alerts", tone: "text-saffron-dark bg-amber-50",
     icon: <Icon><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 21h4" /></Icon> },
+  { label: "Open safety map", desc: "See alerts and shelters on a map", href: "#safety-map", tone: "text-emerald-700 bg-emerald-50",
+    icon: <Icon><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6Z" /><path d="M9 4v14M15 6v14" /></Icon> },
   { label: "Call 112", desc: "Reach emergency services now", href: "tel:112", tone: "text-emerald-700 bg-emerald-50",
     icon: <Icon><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></Icon> },
 ];
@@ -120,6 +128,20 @@ export default function CitizenHome() {
               </Link>
             ))}
           </div>
+        </section>
+
+        <section id="safety-map" aria-labelledby="safety-map-h" className="scroll-mt-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div><h2 id="safety-map-h" className="font-display text-xl font-bold">Safety map</h2><p className="mt-1 text-sm text-slate-500">Active alerts and registered shelters near their actual locations.</p></div>
+            <span className="text-xs text-slate-500">Tap a marker for details</span>
+          </div>
+          <div className="card overflow-hidden p-2 sm:p-3">
+            <div className="h-[50vh] min-h-[360px] overflow-hidden rounded-xl">
+              <ResponseMap alerts={alerts} shelters={shelters} showAlerts showShelters />
+            </div>
+            <p className="px-2 pb-1 pt-2 text-xs text-slate-500">Map data © OpenStreetMap contributors · {alerts.filter((alert) => alert.lat != null).length} mapped alerts · {shelters.length} shelters</p>
+          </div>
+          {(alertsError || sheltersError) && <p role="status" className="mt-2 text-sm text-amber-800">Some map locations may be unavailable while data is loading.</p>}
         </section>
 
         <section id="alerts" aria-labelledby="alerts-h" className="scroll-mt-4">
