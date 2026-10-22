@@ -19,6 +19,7 @@ export interface Report {
   status: "pending_verification" | "verified" | "rejected";
   created_at: string;
   verification_result: "verified" | "rejected" | "uncertain" | null;
+  image_url?: string | null;
 }
 export interface Incident {}
 export interface Shelter {
@@ -82,6 +83,8 @@ export interface Alert {
   message: string;
   language: string;
   sent_at: string | null;
+  lat?: number | null;
+  lon?: number | null;
 }
 
 export interface Dispatch {
@@ -92,8 +95,13 @@ export interface Dispatch {
   assignee_id: string | null;
   assignee_name: string | null;
   target_role: "field_officer" | "volunteer" | "official";
+  task_group_id?: string | null;
+  volunteers_needed?: number;
+  volunteers_assigned?: number;
+  completion_note?: string | null;
+  completed_at?: string | null;
   message: string;
-  status: "pending" | "sent" | "acknowledged";
+  status: "pending" | "sent" | "acknowledged" | "completed";
   dispatched_at: string | null;
 }
 

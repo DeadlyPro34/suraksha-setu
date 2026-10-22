@@ -59,6 +59,20 @@ export const createReport = (report: {
     body: JSON.stringify(report),
   }) as Promise<Report>;
 
+export interface MediaUpload {
+  media_id: string;
+  url: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+export const uploadReportMedia = (file: File) =>
+  fetchApi("/api/media/upload", {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
+  }) as Promise<MediaUpload>;
+
 export const getReports = (limit = 100) =>
   fetchApi(`/api/reports/?limit=${limit}`) as Promise<Report[]>;
 
@@ -78,6 +92,9 @@ export const analyzeReport = (reportId: string) =>
 
 export const getAlerts = (limit = 100) =>
   fetchApi(`/api/alerts/?limit=${limit}`) as Promise<Alert[]>;
+
+export const getMapAlerts = (limit = 200) =>
+  fetchApi(`/api/alerts/map?limit=${limit}`) as Promise<Alert[]>;
 
 export const getCitizenAlerts = (limit = 100) =>
   fetchApi(`/api/alerts/nearby?limit=${limit}`) as Promise<Alert[]>;
@@ -150,6 +167,26 @@ export const getResponsePlans = (limit = 100) =>
 export const getFieldOfficers = () =>
   fetchApi("/api/dispatches/field-officers") as Promise<Array<Pick<User, "id" | "name">>>;
 
+export const getVolunteers = () =>
+  fetchApi("/api/dispatches/volunteers") as Promise<Array<Pick<User, "id" | "name" | "phone">>>;
+
+export const getVolunteerTasks = () =>
+  fetchApi("/api/dispatches/volunteer-tasks") as Promise<Dispatch[]>;
+
+export const createVolunteerTask = (data: { response_plan_id: string; message: string; volunteers_needed: number }) =>
+  fetchApi("/api/dispatches/volunteer-tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }) as Promise<Dispatch[]>;
+
+export const assignVolunteer = (dispatchId: string, userId: string) =>
+  fetchApi(`/api/dispatches/${dispatchId}/assign-volunteer`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  }) as Promise<Dispatch>;
+
 export const getUnassignedDispatches = () =>
   fetchApi("/api/dispatches/unassigned") as Promise<Dispatch[]>;
 
@@ -171,4 +208,11 @@ export const acknowledgeDispatch = (dispatchId: string) =>
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: "acknowledged" }),
+  }) as Promise<Dispatch>;
+
+export const completeVolunteerTask = (dispatchId: string, completionNote: string) =>
+  fetchApi(`/api/dispatches/mine/${dispatchId}/complete`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ completion_note: completionNote }),
   }) as Promise<Dispatch>;
