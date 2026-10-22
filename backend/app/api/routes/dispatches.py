@@ -231,6 +231,29 @@ def list_unassigned_dispatches(
     return [_dispatch_out(dispatch) for dispatch in dispatches]
 
 
+@router.get("/field-officer-tasks", response_model=list[DispatchAssignmentOut])
+def list_field_officer_tasks(
+    limit: int = Query(default=200, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official")),
+):
+    dispatches = (
+        db.query(Dispatch)
+        .options(
+            joinedload(Dispatch.assignee),
+            joinedload(Dispatch.response_plan).joinedload(ResponsePlan.incident),
+        )
+        .filter(
+            Dispatch.target_role == DispatchTargetRole.field_officer,
+            Dispatch.assigned_to.is_not(None),
+        )
+        .order_by(Dispatch.dispatched_at.desc().nullslast(), Dispatch.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_dispatch_out(dispatch) for dispatch in dispatches]
+
+
 @router.patch("/{dispatch_id}/assign", response_model=DispatchAssignmentOut)
 def assign_dispatch(
     dispatch_id: UUID,
@@ -301,7 +324,7 @@ def acknowledge_dispatch(
     )
     if dispatch is None:
         raise HTTPException(status_code=404, detail="Assignment not found")
-    if dispatch.target_role == DispatchTargetRole.volunteer:
+    if dispatch.target_role in {DispatchTargetRole.field_officer, DispatchTargetRole.volunteer}:
         allowed_transitions = {
             DispatchStatus.sent: {DispatchStatus.acknowledged},
             DispatchStatus.acknowledged: {DispatchStatus.en_route, DispatchStatus.needs_help},
@@ -328,11 +351,11 @@ def acknowledge_dispatch(
 
 
 @router.patch("/mine/{dispatch_id}/complete", response_model=DispatchAssignmentOut)
-def complete_volunteer_task(
+def complete_assigned_task(
     dispatch_id: UUID,
     data: VolunteerCompletionIn,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("volunteer")),
+    current_user: User = Depends(require_role("field_officer", "volunteer")),
 ):
     dispatch = (
         db.query(Dispatch)
@@ -341,11 +364,12 @@ def complete_volunteer_task(
         .first()
     )
     if dispatch is None:
-        raise HTTPException(status_code=404, detail="Volunteer assignment not found")
-    if dispatch.target_role != DispatchTargetRole.volunteer:
-        raise HTTPException(status_code=409, detail="Only volunteer tasks can be completed here")
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    expected_target = DispatchTargetRole.volunteer if current_user.role == UserRole.volunteer else DispatchTargetRole.field_officer
+    if dispatch.target_role != expected_target:
+        raise HTTPException(status_code=409, detail="This assignment cannot be completed by this account")
     if dispatch.status == DispatchStatus.completed:
-        raise HTTPException(status_code=409, detail="This volunteer task is already complete")
+        raise HTTPException(status_code=409, detail="This assignment is already complete")
     if dispatch.status != DispatchStatus.arrived:
         raise HTTPException(status_code=409, detail="Mark that you have arrived before reporting task completion")
     note = data.completion_note.strip()
@@ -356,11 +380,12 @@ def complete_volunteer_task(
     dispatch.status = DispatchStatus.completed
     if dispatch.checked_in_at is not None and dispatch.checked_out_at is None:
         dispatch.checked_out_at = dispatch.completed_at
-    from app.models.volunteer_location import VolunteerLocation
-    db.query(VolunteerLocation).filter(
-        VolunteerLocation.volunteer_id == current_user.id,
-        VolunteerLocation.dispatch_id == dispatch.id,
-    ).delete(synchronize_session=False)
+    if current_user.role == UserRole.volunteer:
+        from app.models.volunteer_location import VolunteerLocation
+        db.query(VolunteerLocation).filter(
+            VolunteerLocation.volunteer_id == current_user.id,
+            VolunteerLocation.dispatch_id == dispatch.id,
+        ).delete(synchronize_session=False)
     db.commit()
     db.refresh(dispatch)
     return _dispatch_out(dispatch, _assigned_volunteer_count(db, dispatch))
@@ -376,15 +401,15 @@ def acknowledge_volunteer_completion(
         db.query(Dispatch)
         .filter(
             Dispatch.id == dispatch_id,
-            Dispatch.target_role == DispatchTargetRole.volunteer,
+            Dispatch.target_role.in_([DispatchTargetRole.volunteer, DispatchTargetRole.field_officer]),
         )
         .with_for_update()
         .first()
     )
     if dispatch is None:
-        raise HTTPException(status_code=404, detail="Volunteer task not found")
+        raise HTTPException(status_code=404, detail="Assignment not found")
     if dispatch.status != DispatchStatus.completed or not dispatch.completion_note:
-        raise HTTPException(status_code=409, detail="This volunteer task has no completion report to acknowledge")
+        raise HTTPException(status_code=409, detail="This assignment has no completion report to acknowledge")
     if dispatch.completion_acknowledged_at is None:
         dispatch.completion_acknowledged_at = datetime.now(timezone.utc)
         db.commit()
