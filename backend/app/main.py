@@ -15,6 +15,8 @@ from app.api.routes.approvals import router as approvals_router
 from app.api.routes.actions import router as actions_router
 from app.api.routes.dispatches import router as dispatches_router
 from app.api.routes.media import router as media_router
+from app.api.routes.volunteers import router as volunteers_router
+from app.api.routes.resource_reports import router as resource_reports_router
 from app.db.session import get_db
 
 CORS_ORIGINS = [
@@ -40,10 +42,12 @@ app.include_router(reports_router)
 app.include_router(alerts_router)
 app.include_router(shelters_router)
 app.include_router(resources_router)
+app.include_router(resource_reports_router)
 app.include_router(approvals_router)
 app.include_router(actions_router)
 app.include_router(dispatches_router)
 app.include_router(media_router)
+app.include_router(volunteers_router)
 
 
 @app.get('/health')

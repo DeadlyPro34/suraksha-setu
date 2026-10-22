@@ -36,6 +36,7 @@ def list_resources(
                 incident_id=resource.incident_id,
                 type=resource.type,
                 quantity=resource.quantity,
+                location_name=resource.location_name,
                 lat=lat,
                 lon=lon,
                 status=resource.status,

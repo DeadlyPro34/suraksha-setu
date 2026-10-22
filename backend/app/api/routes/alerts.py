@@ -13,6 +13,17 @@ from app.core.dependencies import require_role
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
+def _map_coordinates(incident):
+    """Keep missing/Null Island coordinates out of local response maps."""
+    if not incident or not incident.location:
+        return None, None
+    point = to_shape(incident.location)
+    lat, lon = float(point.y), float(point.x)
+    if lat == 0 and lon == 0:
+        return None, None
+    return lat, lon
+
+
 @router.get("/map", response_model=list[AlertMapOut])
 def list_alerts_for_map(
     limit: int = Query(default=200, ge=1, le=500),
@@ -29,7 +40,7 @@ def list_alerts_for_map(
     )
     result = []
     for alert in alerts:
-        point = to_shape(alert.incident.location) if alert.incident and alert.incident.location else None
+        lat, lon = _map_coordinates(alert.incident)
         result.append(AlertMapOut(
             id=alert.id,
             incident_id=alert.incident_id,
@@ -37,8 +48,8 @@ def list_alerts_for_map(
             message=alert.message,
             language=alert.language,
             sent_at=alert.sent_at,
-            lat=float(point.y) if point else None,
-            lon=float(point.x) if point else None,
+            lat=lat,
+            lon=lon,
         ))
     return result
 
@@ -77,7 +88,7 @@ def list_recent_citizen_alerts(
     )
     result = []
     for alert in alerts:
-        point = to_shape(alert.incident.location) if alert.incident and alert.incident.location else None
+        lat, lon = _map_coordinates(alert.incident)
         result.append(AlertMapOut(
             id=alert.id,
             incident_id=alert.incident_id,
@@ -85,7 +96,7 @@ def list_recent_citizen_alerts(
             message=alert.message,
             language=alert.language,
             sent_at=alert.sent_at,
-            lat=float(point.y) if point else None,
-            lon=float(point.x) if point else None,
+            lat=lat,
+            lon=lon,
         ))
     return result

@@ -42,12 +42,19 @@ class VolunteerOut(BaseModel):
     id: UUID
     name: str
     phone: str
+    available: bool = False
+    skills: Optional[str] = None
+    languages: Optional[str] = None
+    has_transport: bool = False
 
 
 class VolunteerTaskCreate(BaseModel):
     response_plan_id: UUID
     message: str = Field(min_length=5, max_length=2000)
     volunteers_needed: int = Field(default=1, ge=1, le=25)
+    shift_starts_at: Optional[datetime] = None
+    shift_ends_at: Optional[datetime] = None
+    meeting_point: Optional[str] = Field(default=None, max_length=1000)
 
 
 class DispatchAssignmentIn(BaseModel):
@@ -70,11 +77,80 @@ class DispatchAssignmentOut(BaseModel):
     volunteers_assigned: int = 1
     completion_note: Optional[str] = None
     completed_at: Optional[datetime] = None
+    completion_acknowledged_at: Optional[datetime] = None
+    shift_starts_at: Optional[datetime] = None
+    shift_ends_at: Optional[datetime] = None
+    checked_in_at: Optional[datetime] = None
+    checked_out_at: Optional[datetime] = None
+    meeting_point: Optional[str] = None
+    priority_score: Optional[float] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
 
 
 class DispatchStatusIn(BaseModel):
-    status: Literal["acknowledged"]
+    status: Literal["acknowledged", "en_route", "arrived", "needs_help"]
 
 
 class VolunteerCompletionIn(BaseModel):
     completion_note: str = Field(min_length=1, max_length=2000)
+
+
+class VolunteerProfileUpdate(BaseModel):
+    available: bool
+    skills: Optional[str] = Field(default=None, max_length=2000)
+    languages: Optional[str] = Field(default=None, max_length=1000)
+    has_transport: bool = False
+
+
+class VolunteerProfileOut(BaseModel):
+    id: UUID
+    name: str
+    phone: str
+    available: bool
+    skills: Optional[str]
+    languages: Optional[str]
+    has_transport: bool
+
+
+class VolunteerLocationUpdate(BaseModel):
+    dispatch_id: UUID
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+
+
+class VolunteerLocationOut(BaseModel):
+    volunteer_id: UUID
+    volunteer_name: str
+    dispatch_id: UUID
+    task_group_id: Optional[UUID] = None
+    task: str
+    status: str
+    lat: float
+    lon: float
+    updated_at: datetime
+
+
+class VolunteerSOSCreate(BaseModel):
+    message: Optional[str] = Field(default=None, max_length=1000)
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lon: Optional[float] = Field(default=None, ge=-180, le=180)
+    accuracy_m: Optional[float] = Field(default=None, ge=0, le=100000)
+
+
+class VolunteerSafetyEventOut(BaseModel):
+    id: str
+    event_type: str
+    volunteer_id: UUID
+    volunteer_name: str
+    phone: str
+    dispatch_id: UUID
+    task: str
+    message: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    location_source: str = "unavailable"
+    accuracy_m: Optional[float] = None
+    created_at: datetime
+    shift_starts_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
