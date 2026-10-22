@@ -9,7 +9,7 @@ export const fetchApi = async (path: string, options?: RequestInit) => {
       headers.set("Authorization", `Bearer ${token}`);
     }
   }
-  const res = await fetch(`/_api${path}`, { ...options, headers });
+  const res = await fetch(`/api-bridge${path}`, { ...options, headers });
   if (!res.ok) {
     let detail = `API error: ${res.status}`;
     try {
@@ -200,6 +200,9 @@ export const assignVolunteer = (dispatchId: string, userId: string) =>
 export const getUnassignedDispatches = () =>
   fetchApi("/api/dispatches/unassigned") as Promise<Dispatch[]>;
 
+export const getFieldOfficerTasks = () =>
+  fetchApi("/api/dispatches/field-officer-tasks") as Promise<Dispatch[]>;
+
 export const assignDispatch = (dispatchId: string, userId: string) =>
   fetchApi(`/api/dispatches/${dispatchId}/assign`, {
     method: "PATCH",
@@ -249,12 +252,12 @@ export const updateDispatchStatus = (dispatchId: string, status: "acknowledged" 
     body: JSON.stringify({ status }),
   }) as Promise<Dispatch>;
 
-export const completeVolunteerTask = (dispatchId: string, completionNote: string) =>
+export const completeAssignedTask = (dispatchId: string, completionNote: string) =>
   fetchApi(`/api/dispatches/mine/${dispatchId}/complete`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ completion_note: completionNote }),
   }) as Promise<Dispatch>;
 
-export const acknowledgeVolunteerCompletion = (dispatchId: string) =>
+export const acknowledgeDispatchCompletion = (dispatchId: string) =>
   fetchApi(`/api/dispatches/${dispatchId}/acknowledge-completion`, { method: "PATCH" }) as Promise<Dispatch>;
