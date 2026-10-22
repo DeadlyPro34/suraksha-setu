@@ -30,6 +30,12 @@ def submit_decision(
     if not plan:
         raise HTTPException(status_code=404, detail="ResponsePlan not found")
 
+    if plan.status != PlanStatus.pending_approval:
+        raise HTTPException(
+            status_code=409,
+            detail="A decision has already been recorded for this response plan",
+        )
+
     modified_summary = (data.modified_summary or "").strip()
     if data.decision == "modified" and not modified_summary:
         raise HTTPException(
@@ -37,28 +43,16 @@ def submit_decision(
             detail="modified_summary is required for a modified decision",
         )
 
-    approval = (
-        db.query(Approval)
-        .filter(Approval.response_plan_id == plan_id)
-        .first()
+    approval = Approval(
+        id=uuid.uuid4(),
+        response_plan_id=plan_id,
+        approved_by=current_user.id,
+        decision=ApprovalDecision(data.decision),
+        notes=data.notes,
+        modified_summary=modified_summary or None,
+        decided_at=datetime.now(timezone.utc),
     )
-    if approval:
-        approval.approved_by = current_user.id
-        approval.decision = ApprovalDecision(data.decision)
-        approval.notes = data.notes
-        approval.modified_summary = modified_summary or None
-        approval.decided_at = datetime.now(timezone.utc)
-    else:
-        approval = Approval(
-            id=uuid.uuid4(),
-            response_plan_id=plan_id,
-            approved_by=current_user.id,
-            decision=ApprovalDecision(data.decision),
-            notes=data.notes,
-            modified_summary=modified_summary or None,
-            decided_at=datetime.now(timezone.utc),
-        )
-        db.add(approval)
+    db.add(approval)
 
     # Approval, plan status, and first action batch commit atomically.
     plan.status = PlanStatus(data.decision)
@@ -75,7 +69,11 @@ def submit_decision(
 
 
 @router.get("/{plan_id}/decision", response_model=ApprovalOut)
-def get_decision(plan_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_decision(
+    plan_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official")),
+):
     approval = db.query(Approval).filter(Approval.response_plan_id == plan_id).first()
     if not approval:
         raise HTTPException(status_code=404, detail="Decision not found")

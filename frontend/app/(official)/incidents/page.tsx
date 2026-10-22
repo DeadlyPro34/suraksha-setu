@@ -107,6 +107,14 @@ export default function IncidentsPage() {
                   }`}>
                     {inc.status.replace(/_/g, " ")}
                   </span>
+                  {inc.verification_result && (
+                    <span className={`badge ${
+                      inc.verification_result === "verified" ? "badge-success" :
+                      inc.verification_result === "rejected" ? "badge-danger" : "badge-warning"
+                    }`}>
+                      Check: {inc.verification_result}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

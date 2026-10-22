@@ -24,8 +24,9 @@ class Verification(Base):
     )
     result = Column(Enum(VerificationResult, name="verification_result"), nullable=False)
     credibility_score = Column(Float, nullable=True)
-    image_reuse_flag = Column(Boolean, default=False, nullable=False)
-    timestamp_mismatch_flag = Column(Boolean, default=False, nullable=False)
+    image_reuse_flag = Column(Boolean, nullable=True)
+    timestamp_mismatch_flag = Column(Boolean, nullable=True)
+    geolocation_mismatch_flag = Column(Boolean, nullable=True)
     verified_at = Column(DateTime(timezone=True), nullable=True)
 
     # --- relationships ---

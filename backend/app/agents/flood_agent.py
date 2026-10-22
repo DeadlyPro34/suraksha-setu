@@ -75,11 +75,19 @@ class FloodAgent(BaseAgent):
 
         lat, lon = coordinates if coordinates else _MUMBAI_FALLBACK
         rainfall_forecast = get_precipitation_forecast(lat, lon)
+        forecast_available = rainfall_forecast.get("available", False)
         next_24h_mm = float(rainfall_forecast.get("next_24h_mm", 0.0) or 0.0)
 
         return {
-            "severity": _severity_for_rainfall(next_24h_mm),
-            "flooded_pct": _flooded_percentage(next_24h_mm),
+            # Missing weather data is unknown, not evidence of low risk.
+            "severity": (
+                _severity_for_rainfall(next_24h_mm)
+                if forecast_available
+                else "unknown"
+            ),
+            "flooded_pct": (
+                _flooded_percentage(next_24h_mm) if forecast_available else None
+            ),
             "rainfall_forecast": rainfall_forecast,
             "nearest_zone": _nearest_zone(lat, lon),
             "_debug_location_used": {"lat": lat, "lon": lon},

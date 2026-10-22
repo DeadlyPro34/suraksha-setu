@@ -6,6 +6,7 @@ from app.core.dependencies import get_current_user
 from app.models.alert import Alert, AlertType
 from app.schemas.alert import AlertOut
 from app.models.user import User
+from app.core.dependencies import require_role
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 def list_alerts(
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official", "field_officer")),
 ):
     """Return the newest alerts that have actually been recorded."""
     return (

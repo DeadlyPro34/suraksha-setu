@@ -18,6 +18,7 @@ export interface Report {
   lon: number;
   status: "pending_verification" | "verified" | "rejected";
   created_at: string;
+  verification_result: "verified" | "rejected" | "uncertain" | null;
 }
 export interface Incident {}
 export interface Shelter {

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+import logging
+from sqlalchemy.orm import Session, selectinload
 from uuid import UUID
 from datetime import datetime, timezone
 from geoalchemy2.shape import to_shape
@@ -8,10 +9,12 @@ from app.core.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.report import Report
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.report import ReportCreate, ReportOut
+from app.services.verification.verification_service import persist_verification
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+logger = logging.getLogger(__name__)
 
 
 def _report_out(db_report: Report) -> ReportOut:
@@ -25,6 +28,9 @@ def _report_out(db_report: Report) -> ReportOut:
         lon=shape.x,
         status=db_report.status,
         created_at=db_report.created_at,
+        verification_result=(
+            db_report.verification.result.value if db_report.verification else None
+        ),
     )
 
 
@@ -32,10 +38,12 @@ def _report_out(db_report: Report) -> ReportOut:
 def list_reports(
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
+    _current_user: User = Depends(require_role("official", "field_officer")),
 ):
     """Return the newest reports for the incidents feed."""
     reports = (
         db.query(Report)
+        .options(selectinload(Report.verification))
         .order_by(Report.created_at.desc(), Report.id.desc())
         .limit(limit)
         .all()
@@ -51,6 +59,7 @@ def list_my_reports(
 ):
     reports = (
         db.query(Report)
+        .options(selectinload(Report.verification))
         .filter(Report.reporter_id == current_user.id)
         .order_by(Report.created_at.desc(), Report.id.desc())
         .limit(limit)
@@ -93,10 +102,25 @@ def create_report(
     return _report_out(db_report)
 
 @router.get("/{report_id}", response_model=ReportOut)
-def get_report(report_id: UUID, db: Session = Depends(get_db)):
+def get_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     db_report = db.query(Report).filter(Report.id == report_id).first()
     if not db_report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    role = (
+        current_user.role.value
+        if isinstance(current_user.role, UserRole)
+        else str(current_user.role)
+    )
+    if (
+        role not in {UserRole.official.value, UserRole.field_officer.value}
+        and db_report.reporter_id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="You can only view your own reports")
         
     return _report_out(db_report)
 
@@ -129,4 +153,17 @@ def analyze_report(
         db.commit()
         db.refresh(incident)
 
-    return kickoff(str(incident.id))
+    result = kickoff(str(incident.id))
+    misinformation_output = result.get("raw_agent_outputs", {}).get(
+        "misinformation_agent", {}
+    )
+    if misinformation_output.get("report_id") == str(db_report.id):
+        try:
+            persist_verification(db, db_report.id, misinformation_output)
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            logger.error(
+                "Could not persist report verification (%s)", type(exc).__name__
+            )
+    return result
