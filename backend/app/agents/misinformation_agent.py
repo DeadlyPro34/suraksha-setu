@@ -36,8 +36,18 @@ def evaluate_consistency(
     incident_start_time: Optional[datetime],
     report_location: Optional[Tuple[float, float]],
     incident_location: Optional[Tuple[float, float]],
+    *,
+    independent_source: bool = False,
 ) -> Dict[str, Any]:
-    """Evaluate the two checks without database access (also useful for demos)."""
+    """Evaluate source consistency, refusing to count a self-match as evidence."""
+    if not independent_source:
+        return {
+            "verified": False,
+            "credibility_score": None,
+            "timestamp_mismatch_flag": None,
+            "geolocation_mismatch_flag": None,
+        }
+
     if report_created_at is None:
         timestamp_mismatch_flag = None
     else:
@@ -140,6 +150,12 @@ class MisinformationAgent(BaseAgent):
                     incident.start_time if incident else None,
                     report_location,
                     incident_location,
+                    independent_source=(
+                        incident is None or incident.report_id != report.id
+                    ),
+                )
+                self_comparison = bool(
+                    incident is not None and incident.report_id == report.id
                 )
                 lat, lon = incident_location or report_location or (None, None)
                 return {
@@ -151,7 +167,9 @@ class MisinformationAgent(BaseAgent):
                         "reason": "reverse image search not yet implemented",
                     },
                     "verification_status": (
-                        "checked"
+                        "insufficient independent corroboration"
+                        if self_comparison
+                        else "checked"
                         if result["credibility_score"] is not None
                         else "incomplete"
                     ),

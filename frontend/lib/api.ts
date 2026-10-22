@@ -1,4 +1,4 @@
-import { Alert, AuthResponse, NearbyShelter, Report, ResponsePlan, ResponsePlanActions, Shelter, User } from "./types";
+import { Alert, AuthResponse, Dispatch, NearbyShelter, Report, Resource, ResponsePlan, ResponsePlanActions, ResponsePlanSummary, Shelter, User } from "./types";
 
 export const fetchApi = async (path: string, options?: RequestInit) => {
   // Keep browser requests same-origin; Next.js proxies /_api to the backend.
@@ -126,3 +126,32 @@ export const getCurrentUser = () => fetchApi("/api/auth/me") as Promise<User>;
 
 export const getResponsePlanActions = (planId: string) =>
   fetchApi(`/api/response-plans/${planId}/actions`) as Promise<ResponsePlanActions>;
+
+export const getResponsePlans = (limit = 100) =>
+  fetchApi(`/api/response-plans/?limit=${limit}`) as Promise<ResponsePlanSummary[]>;
+
+export const getFieldOfficers = () =>
+  fetchApi("/api/dispatches/field-officers") as Promise<Array<Pick<User, "id" | "name">>>;
+
+export const getUnassignedDispatches = () =>
+  fetchApi("/api/dispatches/unassigned") as Promise<Dispatch[]>;
+
+export const assignDispatch = (dispatchId: string, userId: string) =>
+  fetchApi(`/api/dispatches/${dispatchId}/assign`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  }) as Promise<Dispatch>;
+
+export const getMyDispatches = () =>
+  fetchApi("/api/dispatches/mine") as Promise<Dispatch[]>;
+
+export const getResources = (limit = 200) =>
+  fetchApi(`/api/resources/?limit=${limit}`) as Promise<Resource[]>;
+
+export const acknowledgeDispatch = (dispatchId: string) =>
+  fetchApi(`/api/dispatches/mine/${dispatchId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "acknowledged" }),
+  }) as Promise<Dispatch>;

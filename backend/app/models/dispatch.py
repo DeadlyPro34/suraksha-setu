@@ -28,6 +28,7 @@ class Dispatch(Base):
     response_plan_id = Column(
         UUID(as_uuid=True), ForeignKey("response_plans.id"), nullable=False
     )
+    assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     target_role = Column(
         Enum(DispatchTargetRole, name="dispatch_target_role"), nullable=False
     )
@@ -36,3 +37,4 @@ class Dispatch(Base):
     dispatched_at = Column(DateTime(timezone=True), nullable=True)
 
     response_plan = relationship("ResponsePlan", back_populates="dispatches")
+    assignee = relationship("User", back_populates="dispatches")

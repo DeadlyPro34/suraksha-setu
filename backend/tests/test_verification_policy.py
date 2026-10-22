@@ -28,7 +28,9 @@ def test_derive_result(output, corroboration, expected):
 
 def test_consistent_report_has_full_credibility():
     now = datetime.now(timezone.utc)
-    result = evaluate_consistency(now, now, (19.0, 72.0), (19.0, 72.0))
+    result = evaluate_consistency(
+        now, now, (19.0, 72.0), (19.0, 72.0), independent_source=True
+    )
     assert result["credibility_score"] == 1.0
     assert result["timestamp_mismatch_flag"] is False
     assert result["geolocation_mismatch_flag"] is False
@@ -36,21 +38,29 @@ def test_consistent_report_has_full_credibility():
 
 def test_old_report_flags_timestamp_mismatch():
     now = datetime.now(timezone.utc)
-    result = evaluate_consistency(now - timedelta(days=5), now, (19.0, 72.0), (19.0, 72.0))
+    result = evaluate_consistency(
+        now - timedelta(days=5), now, (19.0, 72.0), (19.0, 72.0),
+        independent_source=True,
+    )
     assert result["credibility_score"] == 0.6
     assert result["timestamp_mismatch_flag"] is True
 
 
 def test_distant_report_flags_geolocation_mismatch():
     now = datetime.now(timezone.utc)
-    result = evaluate_consistency(now, now, (19.0, 72.0), (20.0, 73.0))
+    result = evaluate_consistency(
+        now, now, (19.0, 72.0), (20.0, 73.0), independent_source=True
+    )
     assert result["credibility_score"] == 0.6
     assert result["geolocation_mismatch_flag"] is True
 
 
 def test_old_and_distant_report_flags_both_mismatches():
     now = datetime.now(timezone.utc)
-    result = evaluate_consistency(now - timedelta(days=5), now, (19.0, 72.0), (20.0, 73.0))
+    result = evaluate_consistency(
+        now - timedelta(days=5), now, (19.0, 72.0), (20.0, 73.0),
+        independent_source=True,
+    )
     assert result["credibility_score"] == 0.2
     assert result["timestamp_mismatch_flag"] is True
     assert result["geolocation_mismatch_flag"] is True
@@ -58,6 +68,16 @@ def test_old_and_distant_report_flags_both_mismatches():
 
 def test_missing_inputs_leave_score_unknown():
     result = evaluate_consistency(None, None, None, None)
+    assert result["credibility_score"] is None
+    assert result["timestamp_mismatch_flag"] is None
+    assert result["geolocation_mismatch_flag"] is None
+
+
+def test_same_report_values_are_not_independent_evidence():
+    now = datetime.now(timezone.utc)
+    result = evaluate_consistency(now, now, (19.0, 72.0), (19.0, 72.0))
+
+    assert result["verified"] is False
     assert result["credibility_score"] is None
     assert result["timestamp_mismatch_flag"] is None
     assert result["geolocation_mismatch_flag"] is None

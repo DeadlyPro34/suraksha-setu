@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.report import Report
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 from app.models.user import User, UserRole
+from app.models.response_plan import PlanStatus, ResponsePlan
 from app.schemas.report import ReportCreate, ReportOut
 from app.services.verification.verification_service import persist_verification
 
@@ -154,6 +155,23 @@ def analyze_report(
         db.refresh(incident)
 
     result = kickoff(str(incident.id))
+    response_plan = (
+        db.query(ResponsePlan)
+        .filter(ResponsePlan.incident_id == incident.id)
+        .first()
+    )
+    if response_plan is None:
+        response_plan = ResponsePlan(
+            incident_id=incident.id,
+            priority_score=result["priority_score"],
+            summary=result["summary"],
+            status=PlanStatus.pending_approval,
+            generated_at=datetime.now(timezone.utc),
+        )
+        db.add(response_plan)
+        db.commit()
+        db.refresh(response_plan)
+    result["response_plan_id"] = str(response_plan.id)
     misinformation_output = result.get("raw_agent_outputs", {}).get(
         "misinformation_agent", {}
     )

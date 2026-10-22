@@ -29,3 +29,4 @@ class User(Base):
     # --- relationships ---
     reports = relationship("Report", back_populates="reporter")
     approvals = relationship("Approval", back_populates="approver")
+    dispatches = relationship("Dispatch", back_populates="assignee")

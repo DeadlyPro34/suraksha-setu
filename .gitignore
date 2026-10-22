@@ -8,4 +8,7 @@ node_modules/
 __pycache__/
 *.pyc
 backend/venv/
+.venv/
+.venv-1/
 .venv/*.log
+frontend/tsconfig.tsbuildinfo

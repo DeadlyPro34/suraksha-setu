@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.alert import Alert
 from app.models.report import Report, ReportStatus, ReportType
+from app.models.response_plan import PlanStatus, ResponsePlan
 from app.models.user import User, UserRole
 
 
@@ -31,6 +32,9 @@ class FakeQuery:
         return self
 
     def order_by(self, *_expressions):
+        return self
+
+    def with_for_update(self):
         return self
 
     def options(self, *_options):
@@ -103,6 +107,9 @@ def test_protected_feeds_reject_anonymous_requests(api_client):
     assert client.get("/api/reports/").status_code == 401
     assert client.get(f"/api/reports/{report_id}").status_code == 401
     assert client.get("/api/alerts/").status_code == 401
+    assert client.get("/api/response-plans/").status_code == 401
+    assert client.get("/api/dispatches/field-officers").status_code == 401
+    assert client.get("/api/dispatches/unassigned").status_code == 401
 
 
 def test_citizen_can_read_only_own_report(api_client):
@@ -110,6 +117,9 @@ def test_citizen_can_read_only_own_report(api_client):
     citizen_headers = headers(token(UserRole.citizen, citizen_id))
     assert client.get("/api/reports/", headers=citizen_headers).status_code == 403
     assert client.get("/api/alerts/", headers=citizen_headers).status_code == 403
+    assert client.get("/api/response-plans/", headers=citizen_headers).status_code == 403
+    assert client.get("/api/dispatches/field-officers", headers=citizen_headers).status_code == 403
+    assert client.get("/api/dispatches/unassigned", headers=citizen_headers).status_code == 403
     assert client.get(f"/api/reports/{report_id}", headers=citizen_headers).status_code == 200
 
     other_headers = headers(token(UserRole.citizen, other_id))
@@ -123,3 +133,49 @@ def test_official_and_field_officer_can_read_protected_feeds(api_client, role):
     assert client.get("/api/reports/", headers=access_headers).status_code == 200
     assert client.get(f"/api/reports/{report_id}", headers=access_headers).status_code == 200
     assert client.get("/api/alerts/", headers=access_headers).status_code == 200
+
+
+def test_unknown_pipeline_id_returns_404_without_running_agents(api_client, monkeypatch):
+    client, _report_id, _, _ = api_client
+    from app.api.routes import test_pipeline
+
+    def unexpected_agent_call(_incident_id):
+        raise AssertionError("agent pipeline ran for an unknown ID")
+
+    monkeypatch.setattr(test_pipeline, "kickoff", unexpected_agent_call)
+    response = client.post(
+        f"/api/test/run-pipeline/{uuid4()}",
+        headers=headers(token(UserRole.official)),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Incident or report not found"
+
+
+def test_recorded_response_plan_decision_cannot_be_changed(api_client):
+    client, _, _, _ = api_client
+    plan = ResponsePlan(
+        id=uuid4(),
+        incident_id=uuid4(),
+        priority_score=8,
+        summary="Already approved",
+        status=PlanStatus.approved,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+    class DecisionDB(FakeDB):
+        def query(self, model):
+            return FakeQuery([plan] if model is ResponsePlan else [])
+
+        def add(self, _row):
+            raise AssertionError("a second approval row must not be inserted")
+
+    app.dependency_overrides[get_db] = lambda: DecisionDB([])
+    response = client.post(
+        f"/api/response-plans/{plan.id}/decision",
+        headers=headers(token(UserRole.official)),
+        json={"decision": "rejected"},
+    )
+
+    assert response.status_code == 409
+    assert "already been recorded" in response.json()["detail"]
