@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -19,6 +19,7 @@ class DispatchStatus(str, enum.Enum):
     pending = "pending"
     sent = "sent"
     acknowledged = "acknowledged"
+    completed = "completed"
 
 
 class Dispatch(Base):
@@ -29,6 +30,10 @@ class Dispatch(Base):
         UUID(as_uuid=True), ForeignKey("response_plans.id"), nullable=False
     )
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    task_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    volunteers_needed = Column(Integer, nullable=False, default=1, server_default="1")
+    completion_note = Column(Text, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     target_role = Column(
         Enum(DispatchTargetRole, name="dispatch_target_role"), nullable=False
     )
