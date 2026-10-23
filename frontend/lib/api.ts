@@ -1,4 +1,4 @@
-import { Alert, AuthResponse, Dispatch, NearbyShelter, Report, Resource, ResourceReport, ResponsePlan, ResponsePlanActions, ResponsePlanSummary, Shelter, User, VolunteerLocation, VolunteerProfile, VolunteerSafetyEvent } from "./types";
+import { Alert, AuthResponse, Dispatch, FieldOfficerSupportMessage, FieldOfficerSupportRequest, NearbyShelter, Report, Resource, ResourceReport, ResponsePlan, ResponsePlanActions, ResponsePlanSummary, Shelter, SupplyRequest, User, VolunteerLocation, VolunteerProfile, VolunteerSafetyEvent } from "./types";
 
 export const fetchApi = async (path: string, options?: RequestInit) => {
   // Keep browser requests same-origin; Next.js proxies /_api to the backend.
@@ -105,6 +105,34 @@ export const getShelters = (limit = 200) =>
 export const getNearbyShelters = (lat: number, lon: number) =>
   fetchApi(`/api/shelters/nearby?lat=${lat}&lon=${lon}`) as Promise<NearbyShelter[]>;
 
+export type ShelterMutation = Pick<Shelter, "name" | "lat" | "lon" | "capacity" | "current_occupancy" | "has_electricity" | "has_medical" | "status">;
+
+export const createShelter = (data: ShelterMutation) => fetchApi("/api/shelters/", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+}) as Promise<Shelter>;
+
+export const updateShelter = (shelterId: string, data: ShelterMutation) => fetchApi(`/api/shelters/${shelterId}`, {
+  method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+}) as Promise<Shelter>;
+
+export const getMySupplyRequests = () => fetchApi("/api/supply-requests/mine") as Promise<SupplyRequest[]>;
+export const createSupplyRequest = (data: Pick<SupplyRequest, "resource_type" | "requested_quantity" | "location_name" | "note" | "lat" | "lon">) => fetchApi("/api/supply-requests", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+}) as Promise<SupplyRequest>;
+export const getSupplyRequests = (status?: SupplyRequest["status"]) => fetchApi(`/api/supply-requests${status ? `?status=${status}` : ""}`) as Promise<SupplyRequest[]>;
+export const reviewSupplyRequest = (id: string, decision: "approved" | "rejected", approved_quantity?: number, review_note = "") => fetchApi(`/api/supply-requests/${id}/review`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision, approved_quantity, review_note }),
+}) as Promise<SupplyRequest>;
+export const dispatchSupplyRequest = (id: string, stock_source_resource_id: string, delivery_handler: string, dispatch_note: string) => fetchApi(`/api/supply-requests/${id}/dispatch`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock_source_resource_id, delivery_handler, dispatch_note }),
+}) as Promise<SupplyRequest>;
+export const confirmSupplyReceipt = (id: string, received_quantity: number, receipt_note = "") => fetchApi(`/api/supply-requests/${id}/receipt`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ received_quantity, receipt_note }),
+}) as Promise<SupplyRequest>;
+export const closeSupplyDelivery = (id: string, received_quantity: number, reason = "") => fetchApi(`/api/supply-requests/${id}/close-delivery`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ received_quantity, reason }),
+}) as Promise<SupplyRequest>;
+
 export const runPipeline = async (incidentId: string): Promise<ResponsePlan> => {
   const options: RequestInit = {
     method: 'POST',
@@ -203,11 +231,32 @@ export const getUnassignedDispatches = () =>
 export const getFieldOfficerTasks = () =>
   fetchApi("/api/dispatches/field-officer-tasks") as Promise<Dispatch[]>;
 
-export const assignDispatch = (dispatchId: string, userId: string) =>
+export const getFieldOfficerSupportRequests = () =>
+  fetchApi("/api/dispatches/support-requests") as Promise<FieldOfficerSupportRequest[]>;
+
+export const assignVolunteersToSupportRequest = (requestId: string, volunteerIds: string[]) =>
+  fetchApi(`/api/dispatches/support-requests/${requestId}/assign`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ volunteer_ids: volunteerIds }),
+  }) as Promise<FieldOfficerSupportRequest>;
+
+export const requestFieldOfficerSupport = (dispatchId: string, request: Pick<FieldOfficerSupportRequest, "support_type" | "volunteers_needed" | "details" | "location">) =>
+  fetchApi(`/api/dispatches/mine/${dispatchId}/support-requests`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  }) as Promise<FieldOfficerSupportRequest>;
+
+export const sendSupportRequestMessage = (requestId: string, message: string) =>
+  fetchApi(`/api/dispatches/support-requests/${requestId}/messages`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  }) as Promise<FieldOfficerSupportMessage>;
+
+export const assignDispatch = (dispatchId: string, userId: string, details?: { instructions?: string; due_at?: string; meeting_point?: string }) =>
   fetchApi(`/api/dispatches/${dispatchId}/assign`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, ...details }),
   }) as Promise<Dispatch>;
 
 export const getMyDispatches = () =>
@@ -252,12 +301,29 @@ export const updateDispatchStatus = (dispatchId: string, status: "acknowledged" 
     body: JSON.stringify({ status }),
   }) as Promise<Dispatch>;
 
-export const completeAssignedTask = (dispatchId: string, completionNote: string) =>
+export const completeAssignedTask = (dispatchId: string, completionNote: string, details: { remaining_work?: string; resources_used?: string; media_id?: string } = {}) =>
   fetchApi(`/api/dispatches/mine/${dispatchId}/complete`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ completion_note: completionNote }),
+    body: JSON.stringify({ completion_note: completionNote, ...details }),
   }) as Promise<Dispatch>;
+
+export const addDispatchUpdate = (dispatchId: string, kind: "progress" | "blocker", note: string, media_id?: string) =>
+  fetchApi(`/api/dispatches/mine/${dispatchId}/updates`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, note, media_id }),
+  }) as Promise<Dispatch>;
+
+export const addOfficialDispatchUpdate = (dispatchId: string, note: string) =>
+  fetchApi(`/api/dispatches/${dispatchId}/updates`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: "official_instruction", note }),
+  }) as Promise<Dispatch>;
+
+export const uploadDispatchPhoto = async (file: File): Promise<string> => {
+  const result = await fetchApi("/api/media/upload", { method: "POST", headers: { "Content-Type": file.type }, body: file }) as { media_id: string };
+  return result.media_id;
+};
 
 export const acknowledgeDispatchCompletion = (dispatchId: string) =>
   fetchApi(`/api/dispatches/${dispatchId}/acknowledge-completion`, { method: "PATCH" }) as Promise<Dispatch>;

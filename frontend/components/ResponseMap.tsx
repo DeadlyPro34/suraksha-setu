@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Alert, Dispatch, Shelter, VolunteerLocation, VolunteerSafetyEvent } from "@/lib/types";
 
 const alertColors: Record<string, string> = {
@@ -47,7 +47,12 @@ function InvalidateSizeOnResize() {
   return null;
 }
 
-export function ResponseMap({ alerts, shelters, showAlerts, showShelters, volunteerLocations = [], showVolunteers = false, taskLocations = [], showTasks = false, safetyEvents = [], showSafetyEvents = false }: {
+function MapClickCapture({ onPick }: { onPick?: (lat: number, lon: number) => void }) {
+  useMapEvents({ click: (event) => onPick?.(event.latlng.lat, event.latlng.lng) });
+  return null;
+}
+
+export function ResponseMap({ alerts, shelters, showAlerts, showShelters, volunteerLocations = [], showVolunteers = false, taskLocations = [], showTasks = false, safetyEvents = [], showSafetyEvents = false, onLocationSelect, selectedLocation }: {
   alerts: Alert[];
   shelters: Shelter[];
   showAlerts: boolean;
@@ -58,6 +63,8 @@ export function ResponseMap({ alerts, shelters, showAlerts, showShelters, volunt
   showTasks?: boolean;
   safetyEvents?: VolunteerSafetyEvent[];
   showSafetyEvents?: boolean;
+  onLocationSelect?: (lat: number, lon: number) => void;
+  selectedLocation?: { lat: number; lon: number } | null;
 }) {
   const isValidPoint = (lat: number, lon: number) => Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
   const alertPoints = alerts.filter((alert) => showAlerts && alert.lat != null && alert.lon != null && isValidPoint(alert.lat, alert.lon))
@@ -70,11 +77,12 @@ export function ResponseMap({ alerts, shelters, showAlerts, showShelters, volunt
     .map((task) => [task.lat as number, task.lon as number] as [number, number]);
   const safetyPoints = safetyEvents.filter((event) => showSafetyEvents && event.lat != null && event.lon != null && isValidPoint(event.lat, event.lon))
     .map((event) => [event.lat as number, event.lon as number] as [number, number]);
-  const points = [...alertPoints, ...shelterPoints, ...volunteerPoints, ...taskPoints, ...safetyPoints];
-  const center: [number, number] = points[0] || [23.0225, 72.5714];
+  const points = [...alertPoints, ...shelterPoints, ...volunteerPoints, ...taskPoints, ...safetyPoints, ...(selectedLocation ? [[selectedLocation.lat, selectedLocation.lon] as [number, number]] : [])];
+  const center: [number, number] = selectedLocation ? [selectedLocation.lat, selectedLocation.lon] : points[0] || [23.0225, 72.5714];
 
-  return <MapContainer center={center} zoom={11} scrollWheelZoom className="h-full min-h-0 w-full rounded-xl">
+  return <MapContainer key="leaflet-response-map" center={center} zoom={11} scrollWheelZoom className="h-full min-h-0 w-full rounded-xl">
     <InvalidateSizeOnResize />
+    {onLocationSelect && <MapClickCapture onPick={onLocationSelect} />}
     <TileLayer
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
       url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -83,6 +91,7 @@ export function ResponseMap({ alerts, shelters, showAlerts, showShelters, volunt
       keepBuffer={3}
     />
     <FitMarkers points={points} />
+    {selectedLocation && <Marker position={[selectedLocation.lat, selectedLocation.lon]} icon={markerIcon("#0e7490", "shelter")}><Popup>Selected shelter location</Popup></Marker>}
     {showShelters && shelters.filter((shelter) => isValidPoint(shelter.lat, shelter.lon)).map((shelter) => <Marker key={`shelter-${shelter.id}`} position={[shelter.lat, shelter.lon]} icon={markerIcon(shelter.status === "open" ? "#0f9f6e" : shelter.status === "full" ? "#d97706" : "#64748b", "shelter")}>
       <Popup><div className="min-w-48"><strong>{shelter.name}</strong><p className="mt-1 capitalize">{shelter.status} · {shelter.available_capacity} spaces available</p><p className="text-xs">{shelter.available_percentage}% capacity available</p>{shelter.has_medical && <span className="mr-2 text-xs">Medical support</span>}{shelter.has_electricity && <span className="text-xs">Electricity</span>}</div></Popup>
     </Marker>)}
