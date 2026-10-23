@@ -15,6 +15,7 @@ const navigation = [
   { label: "Field officers", href: "/field-officers", icon: "♙" },
   { label: "Volunteers", href: "/volunteers", icon: "♧" },
   { label: "Stock reports", href: "/resource-reports", icon: "▤" },
+  { label: "Supply deliveries", href: "/supply-requests", icon: "⇢" },
   { label: "Shelters", href: "/official/shelters", icon: "⌂" },
   { label: "Map", href: "/map", icon: "⌖" },
 ];
@@ -26,6 +27,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/field-officers": { title: "Field officer assignments", subtitle: "Assign response dispatches to field officers" },
   "/volunteers": { title: "Volunteer coordination", subtitle: "Create volunteer tasks and manage staffing" },
   "/resource-reports": { title: "Stock reports", subtitle: "Review field counts before updating shared inventory" },
+  "/supply-requests": { title: "Supply delivery tracking", subtitle: "Approve field requests and confirm delivery" },
   "/official/shelters": { title: "Shelter directory", subtitle: "Check capacity and available support" },
   "/map": { title: "Response map", subtitle: "Live view of alerts and shelter locations" },
 };
