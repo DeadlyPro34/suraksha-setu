@@ -17,6 +17,7 @@ from app.api.routes.dispatches import router as dispatches_router
 from app.api.routes.media import router as media_router
 from app.api.routes.volunteers import router as volunteers_router
 from app.api.routes.resource_reports import router as resource_reports_router
+from app.api.routes.supply_requests import router as supply_requests_router
 from app.db.session import get_db
 
 CORS_ORIGINS = [
@@ -43,6 +44,7 @@ app.include_router(alerts_router)
 app.include_router(shelters_router)
 app.include_router(resources_router)
 app.include_router(resource_reports_router)
+app.include_router(supply_requests_router)
 app.include_router(approvals_router)
 app.include_router(actions_router)
 app.include_router(dispatches_router)

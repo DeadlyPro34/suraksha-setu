@@ -11,6 +11,7 @@ from app.core.dependencies import require_role
 from app.db.session import get_db
 from app.models.resource import Resource, ResourceStatus, ResourceType
 from app.models.resource_report import ResourceReport
+from app.models.supply_request import SupplyRequest
 from app.models.user import User, UserRole
 from app.schemas.resource_report import ResourceReportCreate, ResourceReportOut, ResourceReportReview
 
@@ -114,6 +115,30 @@ def review_resource_report(
     report.review_note = data.review_note.strip() if data.review_note else None
     report.reviewed_by = official.id
     report.reviewed_at = datetime.now(timezone.utc)
+    if data.decision == "approved":
+        requester = db.query(User).filter(User.id == report.submitted_by).first()
+        linked_request = db.query(SupplyRequest).filter(
+            SupplyRequest.source_resource_report_id == report.id
+        ).first()
+        if linked_request is None and requester is not None:
+            db.add(SupplyRequest(
+                requester_id=report.submitted_by,
+                requester_role=requester.role.value,
+                source_resource_report_id=report.id,
+                resource_type=report.resource_type,
+                requested_quantity=report.quantity,
+                approved_quantity=report.quantity,
+                location_name=report.location_name,
+                lat=report.lat,
+                lon=report.lon,
+                note=report.note,
+                status="approved",
+                created_at=report.submitted_at,
+                reviewed_by=official.id,
+                reviewed_at=report.reviewed_at,
+                review_note=report.review_note,
+                receipt_status="awaiting_confirmation",
+            ))
     db.commit()
     db.refresh(report)
     return _out(db, report)
