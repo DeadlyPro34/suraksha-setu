@@ -24,6 +24,7 @@ class SupplyRequestReview(BaseModel):
 
 class SupplyRequestDispatch(BaseModel):
     stock_source_resource_id: UUID
+    dispatched_quantity: int = Field(ge=1, le=1_000_000)
     delivery_handler: str = Field(min_length=2, max_length=200)
     dispatch_note: str = Field(min_length=3, max_length=2000)
 
@@ -46,6 +47,7 @@ class SupplyRequestOut(BaseModel):
     resource_type: ResourceType
     requested_quantity: int
     approved_quantity: Optional[int]
+    dispatched_quantity: Optional[int]
     stock_source_resource_id: Optional[UUID]
     stock_source_location: Optional[str]
     location_name: str

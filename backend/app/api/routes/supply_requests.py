@@ -33,6 +33,7 @@ def _out(item: SupplyRequest) -> SupplyRequestOut:
         resource_type=item.resource_type,
         requested_quantity=item.requested_quantity,
         approved_quantity=item.approved_quantity,
+        dispatched_quantity=item.dispatched_quantity,
         stock_source_resource_id=item.stock_source_resource_id,
         stock_source_location=item.stock_source_resource.location_name if item.stock_source_resource else None,
         location_name=item.location_name,
@@ -172,13 +173,16 @@ def dispatch_supply_request(
     ).with_for_update().first())
     if stock is None or stock.type != ResourceType(item.resource_type):
         raise HTTPException(status_code=422, detail="Choose a valid stock location for this supply type.")
-    quantity = item.approved_quantity or 0
+    quantity = data.dispatched_quantity
+    if quantity > (item.approved_quantity or 0):
+        raise HTTPException(status_code=422, detail="Dispatch quantity cannot exceed the approved quantity.")
     if stock.status != ResourceStatus.available or stock.quantity < quantity:
-        raise HTTPException(status_code=409, detail="This stock location does not have enough available units.")
+        raise HTTPException(status_code=409, detail="This stock location no longer has that many available units. Refresh stock and try again.")
     stock.quantity -= quantity
     if stock.quantity == 0:
         stock.status = ResourceStatus.depleted
     item.stock_source_resource_id = stock.id
+    item.dispatched_quantity = quantity
     item.delivery_handler = data.delivery_handler.strip()
     item.dispatch_note = data.dispatch_note.strip()
     item.dispatched_by = official.id
@@ -201,7 +205,7 @@ def confirm_supply_receipt(
         raise HTTPException(status_code=404, detail="Supply request not found.")
     if item.status not in {"dispatched", "delivery_issue"}:
         raise HTTPException(status_code=409, detail="This request is not awaiting delivery confirmation.")
-    expected = item.approved_quantity or 0
+    expected = item.dispatched_quantity or item.approved_quantity or 0
     if data.received_quantity > expected:
         raise HTTPException(status_code=422, detail="Received quantity cannot exceed the approved quantity.")
     if data.received_quantity < expected and not (data.receipt_note or "").strip():
@@ -230,7 +234,7 @@ def close_delivery_without_requester_confirmation(
     item = _get_item(db, request_id)
     if item.status not in {"dispatched", "delivery_issue", "receipt_submitted"}:
         raise HTTPException(status_code=409, detail="Only a dispatched delivery or submitted receipt can be closed.")
-    expected = item.approved_quantity or 0
+    expected = item.dispatched_quantity or item.approved_quantity or 0
     if data.received_quantity > expected:
         raise HTTPException(status_code=422, detail="Received quantity cannot exceed the approved quantity.")
     reason = (data.reason or "").strip()

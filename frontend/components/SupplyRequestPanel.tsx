@@ -63,18 +63,31 @@ export function SupplyRequestPanel() {
 
   const sendReceipt = async (event: FormEvent, request: SupplyRequest) => {
     event.preventDefault();
-    const draft = receipts[request.id] || { quantity: request.approved_quantity || 0, note: "" };
+    const dispatched = request.dispatched_quantity ?? request.approved_quantity ?? 0;
+    const draft = receipts[request.id] || { quantity: dispatched, note: "" };
     setBusy(request.id); setError(""); setNotice("");
     try {
       await confirmSupplyReceipt(request.id, draft.quantity, draft.note.trim());
-      setNotice(draft.quantity < (request.approved_quantity || 0) ? "Short delivery reported. Officials will review and close the delivery." : "Receipt submitted. Officials will review and close the delivery.");
+      setNotice(draft.quantity < dispatched ? "Short delivery reported. Officials will review and close the delivery." : "Receipt submitted. Officials will review and close the delivery.");
       await load(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not submit delivery confirmation."); }
     finally { setBusy(null); }
   };
 
-  const updateReceipt = (id: string, request: SupplyRequest, update: Partial<{ quantity: number; note: string }>) =>
-    setReceipts((current) => ({ ...current, [id]: { quantity: current[id]?.quantity ?? request.approved_quantity ?? 0, note: current[id]?.note ?? "", ...update } }));
+  const updateReceipt = (
+    id: string,
+    request: SupplyRequest,
+    update: { quantity?: number; note?: string },
+  ) => {
+    setReceipts((current) => ({
+      ...current,
+      [id]: {
+        quantity: current[id]?.quantity ?? request.dispatched_quantity ?? request.approved_quantity ?? 0,
+        note: current[id]?.note ?? "",
+        ...update,
+      },
+    }));
+  };
 
   return <section className="card border-l-4 border-l-teal-600 p-5 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-800">Field supplies</p><h2 className="mt-1 text-xl font-bold text-slate-900">Request and track supplies</h2><p className="mt-1 text-sm text-slate-600">Only this account&apos;s requests appear here. Officials approve requests and close delivery reports; recipients only submit what arrived.</p></div><span className="rounded-full bg-teal-50 px-3 py-1.5 text-sm font-bold text-teal-900">{requests.filter((request) => ["pending", "approved", "dispatched", "receipt_submitted", "delivery_issue"].includes(request.status)).length} open</span></div>
@@ -88,10 +101,50 @@ export function SupplyRequestPanel() {
     </form>
     <div className="mt-5"><div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-semibold text-slate-900">Your supply requests</h3><button type="button" onClick={() => void load()} disabled={loading} className="text-sm font-semibold text-teal-800 hover:underline">{loading ? "Refreshing…" : "Refresh"}</button></div>
       {loading ? <p role="status" className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">Loading requests…</p> : requests.length === 0 ? <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">No supply requests submitted yet.</p> : <div className="space-y-3">{requests.map((request) => <article key={request.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><h4 className="font-bold text-slate-900">{supplyLabels[request.resource_type]} · {request.approved_quantity ?? request.requested_quantity} {request.approved_quantity == null ? "requested" : "approved"}</h4><p className="mt-1 text-sm text-slate-700">{request.location_name} · {request.note}</p><p className="mt-1 text-xs text-slate-500">Requested by {request.requester_name} ({request.requester_role.replace(/_/g, " ")}) · {dateLabel(request.created_at)}</p></div><span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusClasses[request.status]}`}>{request.status.replace(/_/g, " ")}</span></div>
-        <ol aria-label="Delivery progress" className="mt-4 grid grid-cols-4 gap-1 text-center text-[11px] font-semibold sm:text-xs">{["Requested", "Approved", "Dispatched", "Received"].map((step, index) => { const complete = request.status === "delivered" || (request.status === "receipt_submitted" && index < 4) || (request.status === "delivery_issue" && index < 3) || (request.status === "dispatched" && index < 3) || (request.status === "approved" && index < 2) || (request.status === "rejected" && index === 0) || (request.status === "pending" && index === 0); return <li key={step} className={`rounded-md px-1 py-2 ${complete ? "bg-teal-100 text-teal-950" : "bg-slate-100 text-slate-500"}`}>{step}</li>; })}</ol>
-        {request.review_note && <p className="mt-3 text-sm text-slate-600"><strong>Official review:</strong> {request.review_note}</p>}{request.delivery_handler && <p className="mt-2 text-sm text-slate-700"><strong>Delivery handled by:</strong> {request.delivery_handler}{request.dispatched_at ? ` · Sent ${dateLabel(request.dispatched_at)}` : ""}</p>}{request.dispatch_note && <p className="mt-1 text-sm text-slate-600">{request.dispatch_note}</p>}
-        {request.status === "dispatched" || request.status === "delivery_issue" ? <form onSubmit={(event) => void sendReceipt(event, request)} className="mt-4 grid gap-2 rounded-lg border border-violet-200 bg-violet-50/60 p-3 sm:grid-cols-[minmax(120px,.35fr)_1fr_auto] sm:items-end"><label className="text-sm font-semibold text-slate-700">Quantity received<input type="number" min={0} max={request.approved_quantity || 0} required value={receipts[request.id]?.quantity ?? request.approved_quantity ?? 0} onChange={(event) => updateReceipt(request.id, request, { quantity: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2" /></label><label className="text-sm font-semibold text-slate-700">Receipt note (required for short delivery)<input value={receipts[request.id]?.note || ""} onChange={(event) => updateReceipt(request.id, request, { note: event.target.value })} placeholder="Confirm receipt or describe missing items" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2" /></label><button type="submit" disabled={busy === request.id || ((receipts[request.id]?.quantity ?? request.approved_quantity ?? 0) < (request.approved_quantity || 0) && !receipts[request.id]?.note?.trim())} className="rounded-lg bg-violet-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{busy === request.id ? "Sending…" : "Submit receipt to officials"}</button></form> : null}
-        {request.status === "receipt_submitted" && <p role="status" className="mt-2 rounded-lg bg-cyan-50 p-3 text-sm font-semibold text-cyan-950">Receipt submitted: {request.received_quantity} of {request.approved_quantity} received. Officials have been notified and will close the delivery.</p>}{request.status === "delivery_issue" && <p role="alert" className="mt-2 text-sm font-semibold text-orange-900">Short delivery reported: {request.received_quantity} of {request.approved_quantity} received. Officials have been notified.</p>}{request.status === "delivered" && <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-950">{request.receipt_status === "official_override" ? `Officials closed the delivery without requester confirmation (${request.received_quantity} received). ${request.official_close_note || ""}` : `Receipt confirmed: ${request.received_quantity} received${request.received_at ? ` · ${dateLabel(request.received_at)}` : ""}. ${request.receipt_note || ""}`}</p>}
+        <ol aria-label="Delivery progress" className="mt-4 grid grid-cols-5 gap-1 text-center text-[11px] font-semibold sm:text-xs">{["Requested", "Approved", "Dispatched", "Receipt sent", "Officially closed"].map((step, index) => { const completedThrough = request.status === "delivered" ? 4 : request.status === "receipt_submitted" ? 3 : request.status === "delivery_issue" ? 2 : request.status === "dispatched" ? 2 : request.status === "approved" ? 1 : 0; const complete = request.status !== "rejected" && index <= completedThrough; return <li key={step} className={`rounded-md px-1 py-2 ${complete ? "bg-teal-100 text-teal-950" : "bg-slate-100 text-slate-500"}`}>{step}</li>; })}</ol>
+        {(request.reviewer_name || request.review_note) && <div className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-950"><strong>Official review{request.reviewer_name ? ` · ${request.reviewer_name}` : ""}</strong>{request.reviewed_at ? ` · ${dateLabel(request.reviewed_at)}` : ""}{request.review_note && <p className="mt-1">{request.review_note}</p>}</div>}
+        {(request.dispatched_quantity != null && request.approved_quantity != null && request.dispatched_quantity < request.approved_quantity) && <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><strong>Stock shortage:</strong> {request.dispatched_quantity} of {request.approved_quantity} approved units are being sent; {request.approved_quantity - request.dispatched_quantity} remain unfulfilled due to limited stock.</p>}
+        {(request.delivery_handler || request.dispatcher_name || request.stock_source_location || request.dispatched_at || request.dispatch_note) && <div className="mt-2 rounded-lg bg-violet-50 p-3 text-sm text-violet-950"><strong>Dispatch details</strong>{request.delivery_handler && <p className="mt-1">Handler: {request.delivery_handler}</p>}{request.dispatcher_name && <p>Recorded by: {request.dispatcher_name}</p>}{request.stock_source_location && <p>Stock sent from: {request.stock_source_location}</p>}{request.dispatched_at && <p>Dispatched: {dateLabel(request.dispatched_at)}</p>}{request.dispatch_note && <p className="mt-1">{request.dispatch_note}</p>}</div>}
+        {request.status === "dispatched" || request.status === "delivery_issue" ? <form onSubmit={(event) => void sendReceipt(event, request)} className="mt-4 grid gap-2 rounded-lg border border-violet-200 bg-violet-50/60 p-3 sm:grid-cols-[minmax(120px,.35fr)_1fr_auto] sm:items-end"><label className="text-sm font-semibold text-slate-700">Quantity received<input type="number" min={0} max={request.dispatched_quantity ?? request.approved_quantity ?? 0} required value={receipts[request.id]?.quantity ?? request.dispatched_quantity ?? request.approved_quantity ?? 0} onChange={(event) => updateReceipt(request.id, request, { quantity: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2" /></label><label className="text-sm font-semibold text-slate-700">Receipt note (required if fewer arrived)<input value={receipts[request.id]?.note || ""} onChange={(event) => updateReceipt(request.id, request, { note: event.target.value })} placeholder="Confirm receipt or describe missing items" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2" /></label><button type="submit" disabled={busy === request.id || ((receipts[request.id]?.quantity ?? request.dispatched_quantity ?? request.approved_quantity ?? 0) < (request.dispatched_quantity ?? request.approved_quantity ?? 0) && !receipts[request.id]?.note?.trim())} className="rounded-lg bg-violet-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{busy === request.id ? "Sending…" : "Submit receipt to officials"}</button></form> : null}
+        {request.status === "receipt_submitted" && (
+          <div role="status" className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-950">
+            <strong>Receipt sent · awaiting official closure</strong>
+            <p className="mt-1">
+              {request.receiver_name || "Recipient"} reported {request.received_quantity} of {request.dispatched_quantity ?? request.approved_quantity} dispatched units received
+              {request.received_at ? ` · ${dateLabel(request.received_at)}` : ""}.
+            </p>
+            {request.receipt_note && <p className="mt-1">Receipt note: {request.receipt_note}</p>}
+            <p className="mt-2 font-medium">Officials will review the received quantity and update the stock record when they close this delivery.</p>
+          </div>
+        )}
+        {request.status === "delivery_issue" && (
+          <p role="alert" className="mt-2 text-sm font-semibold text-orange-900">
+            Short delivery reported: {request.received_quantity} of {request.dispatched_quantity ?? request.approved_quantity} dispatched units received. Officials have been notified.
+          </p>
+        )}
+        {request.status === "delivered" && (
+          <div className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-950">
+            <strong>Delivery officially closed</strong>
+            {request.receipt_status === "official_override" ? (
+              <p className="mt-1">
+                Closed by {request.closer_name || "an official"} without recipient confirmation
+                {request.closed_at ? ` · ${dateLabel(request.closed_at)}` : ""}.
+              </p>
+            ) : (
+              <p className="mt-1">
+                {request.receiver_name || "Recipient"} confirmed {request.received_quantity} received
+                {request.received_at ? ` · ${dateLabel(request.received_at)}` : ""}.
+              </p>
+            )}
+            {request.dispatched_quantity != null && request.approved_quantity != null && request.dispatched_quantity < request.approved_quantity && <p className="mt-1">Still unfulfilled due to limited stock: {request.approved_quantity - request.dispatched_quantity} units.</p>}
+            {request.stock_source_location && <p>Stock was issued from: {request.stock_source_location}</p>}
+            {request.closer_name && request.receipt_status !== "official_override" && (
+              <p>Closed by {request.closer_name}{request.closed_at ? ` · ${dateLabel(request.closed_at)}` : ""}</p>
+            )}
+            {request.receipt_note && <p className="mt-1">Recipient note: {request.receipt_note}</p>}
+            {request.official_close_note && <p className="mt-1">Official note: {request.official_close_note}</p>}
+          </div>
+        )}
       </article>)}</div>}
     </div>
   </section>;

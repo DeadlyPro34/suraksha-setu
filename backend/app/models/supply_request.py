@@ -18,6 +18,7 @@ class SupplyRequest(Base):
     resource_type = Column(String(32), nullable=False)
     requested_quantity = Column(Integer, nullable=False)
     approved_quantity = Column(Integer, nullable=True)
+    dispatched_quantity = Column(Integer, nullable=True)
     location_name = Column(String(200), nullable=False)
     lat = Column(Float, nullable=True)
     lon = Column(Float, nullable=True)

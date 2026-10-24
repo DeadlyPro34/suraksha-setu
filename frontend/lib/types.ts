@@ -52,10 +52,20 @@ export interface Shelter {
   has_electricity: boolean;
   has_medical: boolean;
   status: "open" | "full" | "closed";
+  updated_at?: string | null;
 }
 export interface NearbyShelter extends Shelter {
   distance_km: number;
   capacity_pct: number;
+}
+export interface DrivingDirections {
+  route_found: boolean;
+  distance_km: number | null;
+  duration_min: number | null;
+  coordinates: [number, number][];
+  steps: Array<{ instruction: string; distance_km: number; location?: [number, number] }>;
+  destination?: { lat: number; lon: number };
+  routes_considered?: number;
 }
 export interface Resource {
   id: string;
@@ -94,6 +104,7 @@ export interface SupplyRequest {
   resource_type: Resource["type"];
   requested_quantity: number;
   approved_quantity: number | null;
+  dispatched_quantity: number | null;
   stock_source_resource_id: string | null;
   stock_source_location: string | null;
   location_name: string;
@@ -157,6 +168,7 @@ export interface Alert {
   message: string;
   language: string;
   sent_at: string | null;
+  active_until?: string | null;
   lat?: number | null;
   lon?: number | null;
 }
@@ -253,4 +265,37 @@ export interface ResourceRequest {
   type: string;
   quantity: number;
   incidentId: string;
+}
+
+export interface WeatherSnapshot {
+  latitude: number;
+  longitude: number;
+  source: string;
+  retrieved_at: string;
+  current: {
+    temperature_c: number | null;
+    feels_like_c: number | null;
+    humidity_pct: number | null;
+    wind_speed_m_s: number | null;
+    rain_rate_last_hour_mm_h: number | null;
+    next_hour_peak_rain_rate_mm_h: number;
+    condition: string;
+    icon: string | null;
+    observed_at: string | null;
+  };
+  forecast: Array<{
+    time: string | null;
+    precipitation_probability: number;
+    rain_rate_mm_h: number | null;
+    condition: string;
+  }>;
+  alerts: Array<{
+    event: string;
+    sender: string;
+    description: string;
+    starts_at: string | null;
+    ends_at: string | null;
+    tags: string[];
+  }>;
+  alerts_data_available: boolean;
 }
