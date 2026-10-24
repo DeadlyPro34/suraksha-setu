@@ -21,6 +21,22 @@ export default function RegisterPage() {
 
   const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (name.trim().length < 2) {
+      setError("Enter your name using at least 2 characters.");
+      return;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Enter a 10-digit Indian mobile number without +91.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must contain at least 8 characters.");
+      return;
+    }
+    if (role !== "citizen" && !inviteCode.trim()) {
+      setError("Enter the invite code for this account role.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -52,11 +68,12 @@ export default function RegisterPage() {
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-            <input id="name" required maxLength={200} value={name} onChange={(event) => setName(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="name" />
+            <input id="name" required minLength={2} maxLength={200} value={name} onChange={(event) => setName(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="name" />
           </div>
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-            <input id="phone" type="tel" inputMode="numeric" required minLength={10} maxLength={10} pattern="[0-9]{10}" title="Enter exactly 10 digits." value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="tel" />
+            <input id="phone" type="tel" inputMode="numeric" required minLength={10} maxLength={10} pattern="[0-9]{10}" title="Enter 10 digits without +91." placeholder="98765 43210" value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="tel" />
+            <p className="mt-1 text-xs text-slate-500">Enter 10 digits without +91 ({phone.length}/10).</p>
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
@@ -76,7 +93,7 @@ export default function RegisterPage() {
             <div>
               <label htmlFor="invite" className="block text-sm font-medium text-slate-700 mb-1">Role invite code</label>
               <input id="invite" type="password" required value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="off" />
-              <p className="mt-1 text-xs text-slate-500">Privileged roles require the private signup code configured by the administrator.</p>
+              <p className="mt-1 text-xs text-slate-500">Volunteer, field officer, and official accounts require an administrator invite code.</p>
             </div>
           )}
 

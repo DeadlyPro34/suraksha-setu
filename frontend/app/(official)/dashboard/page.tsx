@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { acknowledgeDispatchCompletion, getAlerts, getFieldOfficerTasks, getReports, getShelters } from "@/lib/api";
 import { Alert, Dispatch, Report, Shelter } from "@/lib/types";
 
+type ReportQueue = "all" | "pending_verification" | "verified" | "rejected";
+
 const statusClass: Record<string, string> = {
   pending_verification: "badge-warning",
   verified: "badge-success",
@@ -20,13 +22,14 @@ export default function OfficialDashboard() {
   const [loading, setLoading] = useState(true);
   const [busyReport, setBusyReport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportQueue, setReportQueue] = useState<ReportQueue>("all");
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [reportRows, shelterRows, alertRows] = await Promise.all([
-        getReports(), getShelters(), getAlerts(),
+        getReports(500), getShelters(), getAlerts(500),
       ]);
       setReports(reportRows);
       setShelters(shelterRows);
@@ -49,8 +52,27 @@ export default function OfficialDashboard() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const openShelters = shelters.filter((shelter) => shelter.status === "open").length;
-  const activeAlerts = alerts.filter((alert) => alert.type !== "all_clear").length;
+  const activeAlertRows = alerts
+    .filter((alert) => alert.type !== "all_clear" && (!alert.active_until || new Date(alert.active_until).getTime() > Date.now()))
+    .sort((left, right) => {
+      const order = { evacuation: 0, warning: 1, resupply: 2, all_clear: 3 };
+      return order[left.type] - order[right.type] || new Date(right.sent_at || 0).getTime() - new Date(left.sent_at || 0).getTime();
+    });
+  const activeAlerts = activeAlertRows.length;
   const pendingReports = reports.filter((report) => report.status === "pending_verification").length;
+  const reportCounts: Record<ReportQueue, number> = {
+    all: reports.length,
+    pending_verification: pendingReports,
+    verified: reports.filter((report) => report.status === "verified").length,
+    rejected: reports.filter((report) => report.status === "rejected").length,
+  };
+  const reportQueueLabels: Record<ReportQueue, string> = {
+    all: "All",
+    pending_verification: "Pending",
+    verified: "Verified",
+    rejected: "Rejected",
+  };
+  const queuedReports = reportQueue === "all" ? reports : reports.filter((report) => report.status === reportQueue);
   const stats = [
     { label: "Recent reports", value: reports.length, accent: "border-t-sky-600" },
     { label: "Pending verification", value: pendingReports, accent: "border-t-amber-500" },
@@ -85,12 +107,15 @@ export default function OfficialDashboard() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-slate-900">Recent incident reports</h2>
+            <h2 className="text-lg font-bold text-slate-900">Incident reports</h2>
             <Link href="/incidents" className="text-sm font-semibold text-blue-700 hover:underline">All incidents</Link>
           </div>
+          <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Filter incident reports">
+            {(Object.keys(reportQueueLabels) as ReportQueue[]).map((queue) => <button key={queue} type="button" aria-pressed={reportQueue === queue} onClick={() => setReportQueue(queue)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${reportQueue === queue ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"}`}>{reportQueueLabels[queue]} <span className="ml-1 opacity-75">{loading ? "…" : reportCounts[queue]}</span></button>)}
+          </div>
           {loading ? <p role="status" className="card p-5 text-sm text-slate-500">Loading reports…</p>
-            : !error && reports.length === 0 ? <p className="card p-5 text-sm text-slate-500">No reports yet. New citizen reports will appear here.</p>
-              : !error && <div className="space-y-3">{reports.slice(0, 5).map((report) => <article key={report.id} className="card p-4">
+            : !error && queuedReports.length === 0 ? <p className="card p-5 text-sm text-slate-500">No {reportQueue === "all" ? "incident reports" : reportQueueLabels[reportQueue].toLowerCase() + " reports"} in the recent feed.</p>
+              : !error && <div className="space-y-3">{queuedReports.slice(0, 5).map((report) => <article key={report.id} className="card p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0"><h3 className="font-semibold capitalize text-slate-900">{report.type.replace(/_/g, " ")} report</h3><p className="mt-1 line-clamp-2 text-sm text-slate-600">{report.description}</p><p className="mt-2 text-xs text-slate-400">{new Date(report.created_at).toLocaleString()} · {report.lat.toFixed(4)}, {report.lon.toFixed(4)}</p></div>
                   <span className={`badge capitalize ${statusClass[report.status] || "badge-neutral"}`}>{report.status.replace(/_/g, " ")}</span>
@@ -116,9 +141,9 @@ export default function OfficialDashboard() {
             <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-lg font-bold text-slate-900">Latest alerts</h2><Link href="/approvals" className="text-sm font-semibold text-blue-700 hover:underline">Review plans</Link></div>
             <div className="card divide-y divide-slate-100 p-4">
               {loading ? <p className="text-sm text-slate-500">Loading alerts…</p>
-                : alerts.length === 0 ? <p className="text-sm text-slate-500">No alerts have been issued.</p>
-                  : alerts.slice(0, 4).map((alert) => <article key={alert.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-medium capitalize text-slate-800">{alert.type.replace(/_/g, " ")}</p><p className="mt-1 text-sm text-slate-600">{alert.message}</p>
+                  : activeAlertRows.length === 0 ? <p className="text-sm text-slate-500">No active safety alerts.</p>
+                  : activeAlertRows.slice(0, 4).map((alert) => <article key={alert.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="flex items-center gap-2 text-sm font-medium capitalize text-slate-800"><span className={`badge ${alert.type === "evacuation" ? "badge-danger" : alert.type === "warning" ? "badge-warning" : "badge-info"}`}>{alert.type.replace(/_/g, " ")}</span>{alert.sent_at ? <time className="text-xs font-normal text-slate-500">{new Date(alert.sent_at).toLocaleString()}</time> : null}</p><p className="mt-2 text-sm text-slate-600">{alert.message}</p>
                   </article>)}
             </div>
           </section>
