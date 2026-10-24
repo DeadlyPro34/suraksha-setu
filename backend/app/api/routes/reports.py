@@ -191,20 +191,29 @@ def analyze_report(
     result = kickoff(str(incident.id))
     response_plan = (
         db.query(ResponsePlan)
-        .filter(ResponsePlan.incident_id == incident.id)
+        .filter(
+            ResponsePlan.incident_id == incident.id,
+            ResponsePlan.status == PlanStatus.pending_approval,
+        )
+        .order_by(ResponsePlan.generated_at.desc(), ResponsePlan.id.desc())
         .first()
     )
+    generated_at = datetime.now(timezone.utc)
     if response_plan is None:
         response_plan = ResponsePlan(
             incident_id=incident.id,
             priority_score=result["priority_score"],
             summary=result["summary"],
             status=PlanStatus.pending_approval,
-            generated_at=datetime.now(timezone.utc),
+            generated_at=generated_at,
         )
         db.add(response_plan)
-        db.commit()
-        db.refresh(response_plan)
+    else:
+        response_plan.priority_score = result["priority_score"]
+        response_plan.summary = result["summary"]
+        response_plan.generated_at = generated_at
+    db.commit()
+    db.refresh(response_plan)
     result["response_plan_id"] = str(response_plan.id)
     misinformation_output = result.get("raw_agent_outputs", {}).get(
         "misinformation_agent", {}

@@ -145,6 +145,7 @@ export interface AnalysisResult {
   response_plan_id: string;
   priority_score: number;
   summary: string;
+  ai_used: boolean;
   raw_agent_outputs?: Record<string, Record<string, unknown>>;
 }
 
