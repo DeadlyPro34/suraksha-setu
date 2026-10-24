@@ -12,7 +12,8 @@ from .route import Route, RouteStatus  # noqa: F401
 from .response_plan import ResponsePlan, PlanStatus  # noqa: F401
 from .approval import Approval, ApprovalDecision  # noqa: F401
 from .alert import Alert, AlertType  # noqa: F401
-from .dispatch import Dispatch, DispatchTargetRole, DispatchStatus  # noqa: F401
+from .dispatch import Dispatch, DispatchTargetRole, DispatchStatus, DispatchUpdate, FieldOfficerSupportRequest, FieldOfficerSupportMessage  # noqa: F401
 from .volunteer_location import VolunteerLocation  # noqa: F401
 from .volunteer_safety_event import VolunteerSafetyEvent  # noqa: F401
 from .resource_report import ResourceReport  # noqa: F401
+from .supply_request import SupplyRequest  # noqa: F401

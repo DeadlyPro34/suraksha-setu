@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ''
     MEDIA_STORAGE_DIR: Path = BACKEND_ROOT / 'uploads'
     GROQ_API_KEY: str = ''
+    OPENWEATHER_API_KEY: str = ''
     JWT_SECRET: str = ''
     PRIVILEGED_SIGNUP_CODE: str = ''
     class Config:

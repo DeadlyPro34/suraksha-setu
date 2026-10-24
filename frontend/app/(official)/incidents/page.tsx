@@ -49,7 +49,7 @@ export default function IncidentsPage() {
   useEffect(() => { void loadReports(); }, [loadReports]);
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h2 className="text-lg font-bold text-slate-900">All reports</h2><p className="mt-1 text-sm text-slate-500">Review submitted incidents, then send them to the analysis workflow.</p></div>
         <span className="badge badge-info">{loading ? "Loading…" : `${reports.length} reports`}</span>

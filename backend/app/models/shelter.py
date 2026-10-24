@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, String, Integer, Boolean, Enum
+from sqlalchemy import Column, String, Integer, Boolean, Enum, DateTime, func
 from geoalchemy2 import Geometry
 
 from .base import Base, pk_uuid
@@ -29,3 +29,5 @@ class Shelter(Base):
         nullable=False,
         default=ShelterStatus.open,
     )
+    # Legacy shelters keep NULL until an official confirms their details.
+    updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())

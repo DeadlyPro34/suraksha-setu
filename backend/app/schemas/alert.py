@@ -14,6 +14,7 @@ class AlertOut(BaseModel):
     message: str
     language: str
     sent_at: datetime | None
+    active_until: datetime | None = None
 
 
 class AlertMapOut(AlertOut):

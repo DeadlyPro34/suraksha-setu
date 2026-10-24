@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { getAlerts, getReports, getShelters } from "@/lib/api";
-import { Alert, Report, Shelter } from "@/lib/types";
+import { acknowledgeDispatchCompletion, getAlerts, getFieldOfficerTasks, getReports, getShelters } from "@/lib/api";
+import { Alert, Dispatch, Report, Shelter } from "@/lib/types";
 
 const statusClass: Record<string, string> = {
   pending_verification: "badge-warning",
@@ -15,7 +15,10 @@ export default function OfficialDashboard() {
   const [reports, setReports] = useState<Report[]>([]);
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [officerTasks, setOfficerTasks] = useState<Dispatch[]>([]);
+  const [officerReportsUnavailable, setOfficerReportsUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [busyReport, setBusyReport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -28,6 +31,14 @@ export default function OfficialDashboard() {
       setReports(reportRows);
       setShelters(shelterRows);
       setAlerts(alertRows);
+      try {
+        const officerTaskRows = await getFieldOfficerTasks();
+        setOfficerTasks(officerTaskRows.filter((task) => task.completion_note));
+        setOfficerReportsUnavailable(false);
+      } catch {
+        setOfficerTasks([]);
+        setOfficerReportsUnavailable(true);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load dashboard data.");
     } finally {
@@ -47,8 +58,21 @@ export default function OfficialDashboard() {
     { label: "Active alerts", value: activeAlerts, accent: "border-t-red-600" },
   ];
 
+  const acknowledgeOfficerReport = async (task: Dispatch) => {
+    setBusyReport(task.id);
+    setError(null);
+    try {
+      const updated = await acknowledgeDispatchCompletion(task.id);
+      setOfficerTasks((current) => current.map((item) => item.id === updated.id ? updated : item));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not acknowledge the officer report.");
+    } finally {
+      setBusyReport(null);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       {error && <div role="alert" className="card flex flex-wrap items-center justify-between gap-3 border-red-200 bg-red-50 p-4 text-sm text-red-800"><span>Could not load dashboard data: {error}</span><button onClick={() => void refresh()} className="font-semibold underline">Try again</button></div>}
 
       <section aria-label="Response summary" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -100,6 +124,16 @@ export default function OfficialDashboard() {
           </section>
         </aside>
       </div>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-slate-900">Field officer work reports</h2><p className="mt-1 text-sm text-slate-500">Recent completion updates submitted from the field.</p></div><Link href="/field-officers" className="text-sm font-semibold text-blue-700 hover:underline">Field officer assignments →</Link></div>
+        {officerReportsUnavailable && <p role="status" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Officer report data is unavailable because the backend has not loaded the latest routes. Restart the backend service, then refresh.</p>}
+        {loading ? <p role="status" className="card p-5 text-sm text-slate-500">Loading officer reports…</p> : officerTasks.length === 0 ? <p className="card p-5 text-sm text-slate-500">No field officer completion reports yet.</p> : <div className="grid gap-3 xl:grid-cols-2">{officerTasks.slice(0, 4).map((task) => <article key={task.id} className="card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold text-slate-900">{task.assignee_name || "Field officer"}</h3><p className="mt-1 text-sm text-slate-600">{task.message}</p><p className="mt-1 text-xs text-slate-500">Incident {task.incident_id || "unavailable"}{task.completed_at ? ` · ${new Date(task.completed_at).toLocaleString()}` : ""}</p></div><span className={`badge ${task.completion_acknowledged_at ? "badge-success" : "badge-warning"}`}>{task.completion_acknowledged_at ? "Acknowledged" : "Needs review"}</span></div>
+          <p className="mt-3 whitespace-pre-wrap rounded-lg bg-emerald-50 p-3 text-sm text-emerald-950">{task.completion_note}</p>
+          {!task.completion_acknowledged_at && <button type="button" disabled={busyReport === task.id} onClick={() => void acknowledgeOfficerReport(task)} className="mt-3 rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{busyReport === task.id ? "Saving…" : "Acknowledge report"}</button>}
+        </article>)}</div>}
+      </section>
     </div>
   );
 }

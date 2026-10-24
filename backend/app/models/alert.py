@@ -27,6 +27,7 @@ class Alert(Base):
     message = Column(Text, nullable=False)
     language = Column(String, default="en", nullable=False)
     sent_at = Column(DateTime(timezone=True), nullable=True)
+    active_until = Column(DateTime(timezone=True), nullable=True)
 
     # --- relationships ---
     incident = relationship("Incident", back_populates="alerts")

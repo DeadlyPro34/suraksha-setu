@@ -1,7 +1,8 @@
 import os
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,8 @@ from app.api.routes.dispatches import router as dispatches_router
 from app.api.routes.media import router as media_router
 from app.api.routes.volunteers import router as volunteers_router
 from app.api.routes.resource_reports import router as resource_reports_router
+from app.api.routes.supply_requests import router as supply_requests_router
+from app.api.routes.weather import router as weather_router
 from app.db.session import get_db
 
 CORS_ORIGINS = [
@@ -26,6 +29,23 @@ CORS_ORIGINS = [
 ]
 
 app = FastAPI(title="Suraksha Setu API", version="0.1.0")
+
+
+@app.middleware("http")
+async def limit_public_report_body(request: Request, call_next):
+    """Reject oversized public report bodies before JSON parsing."""
+    if request.url.path == "/api/reports/public":
+        raw_length = request.headers.get("content-length")
+        if raw_length:
+            try:
+                if int(raw_length) > 10_000:
+                    return JSONResponse(
+                        {"detail": "Report is too large. Shorten the description and try again."},
+                        status_code=413,
+                    )
+            except ValueError:
+                return JSONResponse({"detail": "Invalid request size."}, status_code=400)
+    return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +63,8 @@ app.include_router(alerts_router)
 app.include_router(shelters_router)
 app.include_router(resources_router)
 app.include_router(resource_reports_router)
+app.include_router(supply_requests_router)
+app.include_router(weather_router)
 app.include_router(approvals_router)
 app.include_router(actions_router)
 app.include_router(dispatches_router)

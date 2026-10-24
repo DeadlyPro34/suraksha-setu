@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.report import Report
+from app.models.dispatch import Dispatch, DispatchUpdate
 from app.models.user import User, UserRole
 
 
@@ -130,7 +131,15 @@ def get_report_media(
     report_query = db.query(Report).filter(Report.image_url == f"/api/media/{media_id}")
     if role not in {UserRole.official.value, UserRole.field_officer.value}:
         report_query = report_query.filter(Report.reporter_id == current_user.id)
-    if report_query.first() is None:
+    report_exists = report_query.first() is not None
+    update_query = db.query(DispatchUpdate).join(Dispatch).filter(
+        DispatchUpdate.media_id == media_id,
+    )
+    if role not in {UserRole.official.value, UserRole.field_officer.value}:
+        update_query = update_query.filter(
+            (DispatchUpdate.author_id == current_user.id) | (Dispatch.assigned_to == current_user.id)
+        )
+    if not report_exists and update_query.first() is None:
         raise HTTPException(status_code=404, detail="Report media not found")
 
     for extension, mime_type in _MEDIA_TYPES_BY_EXTENSION.items():

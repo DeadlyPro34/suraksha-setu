@@ -52,10 +52,20 @@ export interface Shelter {
   has_electricity: boolean;
   has_medical: boolean;
   status: "open" | "full" | "closed";
+  updated_at?: string | null;
 }
 export interface NearbyShelter extends Shelter {
   distance_km: number;
   capacity_pct: number;
+}
+export interface DrivingDirections {
+  route_found: boolean;
+  distance_km: number | null;
+  duration_min: number | null;
+  coordinates: [number, number][];
+  steps: Array<{ instruction: string; distance_km: number; location?: [number, number] }>;
+  destination?: { lat: number; lon: number };
+  routes_considered?: number;
 }
 export interface Resource {
   id: string;
@@ -84,6 +94,44 @@ export interface ResourceReport {
   reviewer_name: string | null;
   reviewed_at: string | null;
   review_note: string | null;
+}
+
+export interface SupplyRequest {
+  id: string;
+  requester_id: string;
+  requester_name: string;
+  requester_role: "field_officer" | "volunteer";
+  resource_type: Resource["type"];
+  requested_quantity: number;
+  approved_quantity: number | null;
+  dispatched_quantity: number | null;
+  stock_source_resource_id: string | null;
+  stock_source_location: string | null;
+  location_name: string;
+  lat: number | null;
+  lon: number | null;
+  note: string;
+  status: "pending" | "approved" | "rejected" | "dispatched" | "receipt_submitted" | "delivery_issue" | "delivered";
+  created_at: string;
+  reviewed_by: string | null;
+  reviewer_name: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  delivery_handler: string | null;
+  dispatch_note: string | null;
+  dispatched_by: string | null;
+  dispatcher_name: string | null;
+  dispatched_at: string | null;
+  received_quantity: number | null;
+  receipt_note: string | null;
+  receipt_status: "awaiting_confirmation" | "confirmed" | "shortfall_reported" | "official_override";
+  received_by: string | null;
+  receiver_name: string | null;
+  received_at: string | null;
+  official_close_note: string | null;
+  closed_by: string | null;
+  closer_name: string | null;
+  closed_at: string | null;
 }
 
 export interface ResponsePlan {
@@ -120,6 +168,7 @@ export interface Alert {
   message: string;
   language: string;
   sent_at: string | null;
+  active_until?: string | null;
   lat?: number | null;
   lon?: number | null;
 }
@@ -146,6 +195,55 @@ export interface Dispatch {
   shift_starts_at?: string | null; shift_ends_at?: string | null;
   checked_in_at?: string | null; checked_out_at?: string | null;
   meeting_point?: string | null;
+    instructions?: string | null;
+    due_at?: string | null;
+    updates?: DispatchUpdate[];
+    support_requests?: FieldOfficerSupportRequest[];
+    support_request_id?: string | null;
+    support_request_messages?: FieldOfficerSupportMessage[];
+}
+
+  export interface DispatchUpdate {
+    id: string;
+    author_id: string;
+    author_name: string;
+    kind: "progress" | "blocker" | "official_instruction" | "completion" | "status_update";
+    note: string;
+    media_id?: string | null;
+    remaining_work?: string | null;
+    resources_used?: string | null;
+    created_at: string;
+  }
+
+export interface FieldOfficerSupportVolunteer {
+  dispatch_id: string;
+  name: string;
+  status: string;
+}
+
+export interface FieldOfficerSupportMessage {
+  id: string;
+  author_id: string;
+  author_name: string;
+  author_role: string;
+  message: string;
+  created_at: string;
+}
+
+export interface FieldOfficerSupportRequest {
+  id: string;
+  dispatch_id: string;
+  requested_by: string;
+  officer_name: string;
+  support_type: "medical" | "rescue" | "logistics" | "general";
+  details: string;
+  location: string | null;
+  volunteers_needed: number;
+  volunteers_assigned: number;
+  volunteers: FieldOfficerSupportVolunteer[];
+  messages?: FieldOfficerSupportMessage[];
+  status: string;
+  created_at: string;
 }
 
 export interface ResponsePlanActions {
@@ -167,4 +265,37 @@ export interface ResourceRequest {
   type: string;
   quantity: number;
   incidentId: string;
+}
+
+export interface WeatherSnapshot {
+  latitude: number;
+  longitude: number;
+  source: string;
+  retrieved_at: string;
+  current: {
+    temperature_c: number | null;
+    feels_like_c: number | null;
+    humidity_pct: number | null;
+    wind_speed_m_s: number | null;
+    rain_rate_last_hour_mm_h: number | null;
+    next_hour_peak_rain_rate_mm_h: number;
+    condition: string;
+    icon: string | null;
+    observed_at: string | null;
+  };
+  forecast: Array<{
+    time: string | null;
+    precipitation_probability: number;
+    rain_rate_mm_h: number | null;
+    condition: string;
+  }>;
+  alerts: Array<{
+    event: string;
+    sender: string;
+    description: string;
+    starts_at: string | null;
+    ends_at: string | null;
+    tags: string[];
+  }>;
+  alerts_data_available: boolean;
 }

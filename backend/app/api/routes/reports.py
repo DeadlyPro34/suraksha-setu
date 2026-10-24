@@ -18,6 +18,32 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 logger = logging.getLogger(__name__)
 
 
+@router.post("/public", response_model=ReportOut, status_code=status.HTTP_201_CREATED)
+def create_public_report(
+    report_in: ReportCreate,
+    db: Session = Depends(get_db),
+):
+    """Accept an anonymous incident report from the public safety page."""
+    if report_in.website.strip():
+        raise HTTPException(status_code=400, detail="Could not submit report.")
+    location_wkt = f"SRID=4326;POINT({report_in.location.lon} {report_in.location.lat})"
+    db_report = Report(
+        reporter_id=None,
+        type=report_in.type,
+        description=report_in.description.strip(),
+        location=location_wkt,
+        image_url=None,
+    )
+    db.add(db_report)
+    try:
+        db.commit()
+        db.refresh(db_report)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Could not submit report. Please try again.") from exc
+    return _report_out(db_report)
+
+
 def _report_out(db_report: Report) -> ReportOut:
     shape = to_shape(db_report.location)
     return ReportOut(

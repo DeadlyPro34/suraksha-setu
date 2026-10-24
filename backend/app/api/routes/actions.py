@@ -21,6 +21,7 @@ class AlertActionOut(BaseModel):
     message: str
     language: str
     sent_at: Optional[datetime]
+    active_until: Optional[datetime] = None
 
 class DispatchActionOut(BaseModel):
     id: str
@@ -69,6 +70,7 @@ def get_plan_actions(
                 "message": alert.message,
                 "language": alert.language,
                 "sent_at": alert.sent_at,
+                "active_until": alert.active_until,
             }
             for alert in alerts
         ],

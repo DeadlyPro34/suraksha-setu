@@ -77,7 +77,7 @@ export default function ApprovalsPage() {
   const decided = plans.filter((plan) => plan.status !== "pending_approval");
 
   return (
-    <div className="mx-auto max-w-6xl space-y-7">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600">Review AI-generated plans before approving field work.</p>
         <Link className="text-sm font-semibold text-blue-700 hover:underline" href="/incidents">View incident reports →</Link>
