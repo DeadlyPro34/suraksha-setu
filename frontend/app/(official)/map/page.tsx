@@ -56,9 +56,9 @@ export default function MapPage() {
       <button type="button" onClick={() => void load()} disabled={loading} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{loading ? "Refreshing…" : "Refresh map"}</button>
     </div>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-      <section className="card min-w-0 p-2 sm:p-3" aria-label="Map showing alerts and shelters">
+      <section className="card relative isolate min-w-0 p-2 sm:p-3" aria-label="Map showing alerts and shelters">
         {error && <p role="alert" className="m-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{error}</p>}
-        <div className="h-[62vh] min-h-[440px] overflow-hidden rounded-xl"><ResponseMap alerts={alerts} shelters={shelters} showAlerts={showAlerts} showShelters={showShelters} volunteerLocations={volunteerLocations} showVolunteers={showVolunteers} taskLocations={taskLocations} showTasks={showTasks} safetyEvents={safetyEvents} showSafetyEvents focusLocation={focusLocation} /></div>
+        <div className="relative isolate h-[56svh] min-h-[320px] overflow-hidden rounded-xl sm:h-[62vh] sm:min-h-[440px]"><ResponseMap alerts={alerts} shelters={shelters} showAlerts={showAlerts} showShelters={showShelters} volunteerLocations={volunteerLocations} showVolunteers={showVolunteers} taskLocations={taskLocations} showTasks={showTasks} safetyEvents={safetyEvents} showSafetyEvents focusLocation={focusLocation} /></div>
         <p className="px-2 pb-1 pt-2 text-xs text-slate-500">Map data © OpenStreetMap contributors</p>
       </section>
       <aside className="space-y-4">
