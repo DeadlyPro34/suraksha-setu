@@ -31,6 +31,8 @@ async function forward(request: NextRequest, path: string[]) {
     const responseHeaders = new Headers();
     const contentType = response.headers.get("content-type");
     if (contentType) responseHeaders.set("content-type", contentType);
+    const location = response.headers.get("location");
+    if (location) responseHeaders.set("location", location);
     return new Response(response.body, { status: response.status, headers: responseHeaders });
   } catch {
     return Response.json(

@@ -15,8 +15,8 @@ export function ReportMedia({ url }: { url: string }) {
         const headers = new Headers();
         const token = window.localStorage.getItem("access_token");
         if (token) headers.set("Authorization", `Bearer ${token}`);
-        const response = await fetch(`/_api${url}`, { headers });
-        if (!response.ok) throw new Error("Could not load attached media.");
+        const response = await fetch(`/api-bridge${url}`, { headers });
+        if (!response.ok) throw new Error(`Could not load attached media (${response.status}).`);
         const blob = await response.blob();
         setIsVideo(blob.type.startsWith("video/"));
         createdUrl = URL.createObjectURL(blob);
