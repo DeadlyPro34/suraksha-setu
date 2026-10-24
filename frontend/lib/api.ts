@@ -107,16 +107,32 @@ export const createReport = (report: {
 export interface MediaUpload {
   media_id: string;
   url: string;
+  upload_url: string;
   content_type: string;
   size_bytes: number;
 }
 
-export const uploadReportMedia = (file: File) =>
-  fetchApi("/api/media/upload", {
+export const uploadReportMedia = async (file: File): Promise<MediaUpload> => {
+  const upload = await fetchApi("/api/media/upload", {
     method: "POST",
-    headers: { "Content-Type": file.type },
-    body: file,
-  }) as Promise<MediaUpload>;
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content_type: file.type, size_bytes: file.size }),
+  }) as MediaUpload;
+  let response: Response;
+  try {
+    response = await fetch(upload.upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": file.type, "x-upsert": "false" },
+      body: file,
+    });
+  } catch {
+    throw new Error("Could not upload the photo to storage. Check your connection and Supabase Storage settings.");
+  }
+  if (!response.ok) {
+    throw new Error(`Photo upload failed (${response.status}). Check that the Supabase bucket allows this file type and size.`);
+  }
+  return upload;
+};
 
 export const getReports = (limit = 100) =>
   fetchApi(`/api/reports/?limit=${limit}`) as Promise<Report[]>;
@@ -378,7 +394,7 @@ export const addOfficialDispatchUpdate = (dispatchId: string, note: string) =>
   }) as Promise<Dispatch>;
 
 export const uploadDispatchPhoto = async (file: File): Promise<string> => {
-  const result = await fetchApi("/api/media/upload", { method: "POST", headers: { "Content-Type": file.type }, body: file }) as { media_id: string };
+  const result = await uploadReportMedia(file);
   return result.media_id;
 };
 

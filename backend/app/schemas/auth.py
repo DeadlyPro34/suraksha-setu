@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 from uuid import UUID
 
@@ -8,7 +9,7 @@ from app.models.user import UserRole
 
 class SignupIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    phone: str = Field(min_length=3, max_length=32)
+    phone: str = Field(min_length=10, max_length=10)
     password: str = Field(min_length=8, max_length=72)
     role: UserRole = UserRole.citizen
     invite_code: Optional[str] = None
@@ -20,10 +21,26 @@ class SignupIn(BaseModel):
             raise ValueError("Password must be at most 72 UTF-8 bytes")
         return value
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone_number(cls, value: str) -> str:
+        value = value.strip()
+        if not re.fullmatch(r"[0-9]{10}", value):
+            raise ValueError("Phone number must contain exactly 10 digits")
+        return value
+
 
 class LoginIn(BaseModel):
-    phone: str
+    phone: str = Field(min_length=10, max_length=10)
     password: str
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone_number(cls, value: str) -> str:
+        value = value.strip()
+        if not re.fullmatch(r"[0-9]{10}", value):
+            raise ValueError("Phone number must contain exactly 10 digits")
+        return value
 
 
 class UserOut(BaseModel):

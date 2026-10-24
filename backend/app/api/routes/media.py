@@ -1,11 +1,14 @@
 """Authenticated image and video attachments for incident reports."""
 
+from functools import lru_cache
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from supabase import create_client
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user, require_role
@@ -17,7 +20,7 @@ from app.models.user import User, UserRole
 
 router = APIRouter(prefix="/api/media", tags=["report media"])
 _MAX_IMAGE_BYTES = 12 * 1024 * 1024
-_MAX_VIDEO_BYTES = 60 * 1024 * 1024
+_MAX_VIDEO_BYTES = 50_000_000
 _ALLOWED_MEDIA = {
     "image/jpeg": ("jpg", _MAX_IMAGE_BYTES),
     "image/png": ("png", _MAX_IMAGE_BYTES),
@@ -30,6 +33,24 @@ _ALLOWED_MEDIA = {
     "video/webm": ("webm", _MAX_VIDEO_BYTES),
 }
 _MEDIA_TYPES_BY_EXTENSION = {extension: mime for mime, (extension, _) in _ALLOWED_MEDIA.items()}
+
+
+class MediaUploadRequest(BaseModel):
+    content_type: str
+    size_bytes: int = Field(gt=0, le=_MAX_VIDEO_BYTES)
+
+
+@lru_cache(maxsize=1)
+def _storage_client():
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Photo storage is not configured. Set the Supabase storage environment variables.",
+        )
+    try:
+        return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not initialize photo storage.") from exc
 
 
 def _valid_signature(data: bytes, mime_type: str) -> bool:
@@ -57,66 +78,43 @@ def _media_path(media_id: UUID, extension: str) -> Path:
 
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
-async def upload_report_media(
-    request: Request,
+def create_media_upload_url(
+    data: MediaUploadRequest,
     _current_user: User = Depends(
         require_role("citizen", "official", "field_officer", "volunteer")
     ),
 ):
-    """Stream a bounded image/video body to local persistent media storage."""
-    mime_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    """Create a one-use upload URL so media bypasses Vercel's function body limit."""
+    mime_type = data.content_type.split(";", 1)[0].strip().lower()
     media_spec = _ALLOWED_MEDIA.get(mime_type)
     if media_spec is None:
         raise HTTPException(status_code=415, detail="Choose a supported image or video file")
 
-    extension, max_bytes = media_spec
-    settings.MEDIA_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    _, max_bytes = media_spec
+    if data.size_bytes > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail="Images must be 12 MB or smaller; videos must be 50 MB or smaller",
+        )
+
     media_id = uuid4()
-    destination = _media_path(media_id, extension)
-    total_bytes = 0
-    signature_buffer = bytearray()
-    signature_checked = False
-
     try:
-        with destination.open("xb") as output:
-            async for chunk in request.stream():
-                if not chunk:
-                    continue
-                total_bytes += len(chunk)
-                if total_bytes > max_bytes:
-                    raise HTTPException(
-                        status_code=413,
-                        detail="Images must be 12 MB or smaller; videos must be 60 MB or smaller",
-                    )
-                if not signature_checked:
-                    signature_buffer.extend(chunk)
-                    if len(signature_buffer) >= 16:
-                        if not _valid_signature(bytes(signature_buffer[:16]), mime_type):
-                            raise HTTPException(status_code=415, detail="The file content does not match its media type")
-                        output.write(signature_buffer)
-                        signature_buffer.clear()
-                        signature_checked = True
-                else:
-                    output.write(chunk)
-
-            if total_bytes == 0:
-                raise HTTPException(status_code=400, detail="The uploaded file is empty")
-            if not signature_checked:
-                if not _valid_signature(bytes(signature_buffer), mime_type):
-                    raise HTTPException(status_code=415, detail="The file content does not match its media type")
-                output.write(signature_buffer)
+        signed_upload = (
+            _storage_client()
+            .storage.from_(settings.SUPABASE_MEDIA_BUCKET)
+            .create_signed_upload_url(str(media_id))
+        )
     except HTTPException:
-        destination.unlink(missing_ok=True)
         raise
-    except OSError as exc:
-        destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail="Could not save the uploaded media") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not prepare the photo upload.") from exc
 
     return {
         "media_id": str(media_id),
         "url": f"/api/media/{media_id}",
+        "upload_url": signed_upload["signed_url"],
         "content_type": mime_type,
-        "size_bytes": total_bytes,
+        "size_bytes": data.size_bytes,
     }
 
 
@@ -141,6 +139,17 @@ def get_report_media(
         )
     if not report_exists and update_query.first() is None:
         raise HTTPException(status_code=404, detail="Report media not found")
+
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            signed_download = (
+                _storage_client()
+                .storage.from_(settings.SUPABASE_MEDIA_BUCKET)
+                .create_signed_url(str(media_id), 600)
+            )
+            return RedirectResponse(signed_download["signedURL"], status_code=307)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="Could not retrieve the attached media.") from exc
 
     for extension, mime_type in _MEDIA_TYPES_BY_EXTENSION.items():
         path = _media_path(media_id, extension)

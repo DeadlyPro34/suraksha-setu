@@ -55,6 +55,8 @@ npm install
 npm run dev
 ```
 
+For deployment, set `DATABASE_URL`, `JWT_SECRET`, and `PRIVILEGED_SIGNUP_CODE` on the backend service. To enable photo and video attachments, create a **private** Supabase Storage bucket named `incident-media`, then set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_MEDIA_BUCKET=incident-media` on the backend service. Configure the bucket's file size and MIME type limits to allow the media types accepted by the report form. Keep the service role key backend-only; uploads use short-lived signed URLs so file bytes go directly from the browser to Supabase Storage.
+
 Next.js proxies browser API calls to `http://127.0.0.1:5000` by default. Set `BACKEND_INTERNAL_URL` if the API is at another address.
 
 ## Stack

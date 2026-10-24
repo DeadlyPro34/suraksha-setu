@@ -9,6 +9,9 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     DATABASE_URL: str = ''
     MEDIA_STORAGE_DIR: Path = BACKEND_ROOT / 'uploads'
+    SUPABASE_URL: str = ''
+    SUPABASE_SERVICE_ROLE_KEY: str = ''
+    SUPABASE_MEDIA_BUCKET: str = 'incident-media'
     GROQ_API_KEY: str = ''
     OPENWEATHER_API_KEY: str = ''
     JWT_SECRET: str = ''

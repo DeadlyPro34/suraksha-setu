@@ -56,7 +56,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-            <input id="phone" type="tel" required minLength={3} maxLength={32} value={phone} onChange={(event) => setPhone(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="tel" />
+            <input id="phone" type="tel" inputMode="numeric" required minLength={10} maxLength={10} pattern="[0-9]{10}" title="Enter exactly 10 digits." value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="tel" />
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>

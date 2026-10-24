@@ -6,6 +6,7 @@ alembic
 psycopg2-binary
 geoalchemy2
 httpx
+supabase
 langchain-core
 langchain-groq
 shapely

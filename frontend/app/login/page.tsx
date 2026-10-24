@@ -65,7 +65,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label htmlFor="phone" className="block text-sm font-semibold text-slate-800 mb-1.5">Phone number</label>
-              <input id="phone" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 98765 43210" className={field} />
+              <input id="phone" type="tel" inputMode="numeric" autoComplete="tel" required minLength={10} maxLength={10} pattern="[0-9]{10}" title="Enter exactly 10 digits." value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="e.g. 9876543210" className={field} />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-semibold text-slate-800 mb-1.5">Password</label>
