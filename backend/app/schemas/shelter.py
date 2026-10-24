@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ class ShelterOut(BaseModel):
     has_electricity: bool
     has_medical: bool
     status: ShelterStatus
+    updated_at: datetime | None = None
 
 
 class NearbyShelterOut(ShelterOut):

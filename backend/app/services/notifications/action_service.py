@@ -1,7 +1,7 @@
 """Create simulated citizen alerts and field-team dispatch instructions."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from geoalchemy2.shape import to_shape
@@ -65,6 +65,7 @@ def trigger_action(response_plan_id: str, db: Session) -> dict[str, int]:
         # Multilingual alert generation is future scope for the Communication Agent.
         language="en",
         sent_at=now,
+        active_until=now + (timedelta(hours=24) if alert_type == AlertType.evacuation else timedelta(hours=12)),
     )
     dispatch = Dispatch(
         response_plan_id=plan.id,

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session, joinedload
+from datetime import datetime, timezone
 
 from app.db.session import get_db
 from app.core.dependencies import get_current_user
@@ -22,6 +23,36 @@ def _map_coordinates(incident):
     if lat == 0 and lon == 0:
         return None, None
     return lat, lon
+
+
+@router.get("/public", response_model=list[AlertMapOut])
+def list_public_alerts(
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Return current public safety notices without requiring an account."""
+    alerts = (
+        db.query(Alert)
+        .options(joinedload(Alert.incident))
+        .filter(Alert.active_until > datetime.now(timezone.utc))
+        .order_by(Alert.sent_at.desc().nullslast(), Alert.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        AlertMapOut(
+            id=alert.id,
+            incident_id=alert.incident_id,
+            type=alert.type,
+            message=alert.message,
+            language=alert.language,
+            sent_at=alert.sent_at,
+            active_until=alert.active_until,
+            lat=_map_coordinates(alert.incident)[0],
+            lon=_map_coordinates(alert.incident)[1],
+        )
+        for alert in alerts
+    ]
 
 
 @router.get("/map", response_model=list[AlertMapOut])
@@ -48,6 +79,7 @@ def list_alerts_for_map(
             message=alert.message,
             language=alert.language,
             sent_at=alert.sent_at,
+            active_until=alert.active_until,
             lat=lat,
             lon=lon,
         ))
@@ -82,6 +114,7 @@ def list_recent_citizen_alerts(
         db.query(Alert)
         .options(joinedload(Alert.incident))
         .filter(Alert.type != AlertType.all_clear)
+        .filter(Alert.active_until > datetime.now(timezone.utc))
         .order_by(Alert.sent_at.desc().nullslast(), Alert.id.desc())
         .limit(limit)
         .all()
@@ -96,6 +129,7 @@ def list_recent_citizen_alerts(
             message=alert.message,
             language=alert.language,
             sent_at=alert.sent_at,
+            active_until=alert.active_until,
             lat=lat,
             lon=lon,
         ))

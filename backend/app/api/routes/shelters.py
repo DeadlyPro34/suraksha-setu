@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2.elements import WKTElement
@@ -11,6 +12,7 @@ from app.models.shelter import Shelter, ShelterStatus
 from app.models.user import User
 from app.schemas.shelter import NearbyShelterOut, ShelterMutation, ShelterOut
 from app.services.shelter_lookup import haversine_km
+from app.services.ingestion.routing_service import get_directions
 
 router = APIRouter(prefix="/api/shelters", tags=["shelters"])
 
@@ -25,6 +27,7 @@ def _shelter_out(shelter: Shelter) -> ShelterOut:
         available_capacity=available, available_percentage=percentage,
         has_electricity=shelter.has_electricity, has_medical=shelter.has_medical,
         status=shelter.status,
+        updated_at=shelter.updated_at,
     )
 
 
@@ -38,6 +41,17 @@ def list_shelters(
     # Deliberately public: shelter availability is non-sensitive safety information.
     shelters = db.query(Shelter).order_by(Shelter.name.asc()).limit(limit).all()
     return [_shelter_out(shelter) for shelter in shelters]
+
+
+@router.get("/directions")
+def shelter_directions(
+    start_lat: float = Query(ge=-90, le=90),
+    start_lon: float = Query(ge=-180, le=180),
+    end_lat: float = Query(ge=-90, le=90),
+    end_lon: float = Query(ge=-180, le=180),
+):
+    """Return a suggested mapped driving route without requiring an account."""
+    return get_directions(start_lat, start_lon, end_lat, end_lon)
 
 
 @router.post("", response_model=ShelterOut, status_code=201)
@@ -83,6 +97,7 @@ def update_shelter(
     shelter.has_electricity = data.has_electricity
     shelter.has_medical = data.has_medical
     shelter.status = data.status
+    shelter.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(shelter)
     return _shelter_out(shelter)

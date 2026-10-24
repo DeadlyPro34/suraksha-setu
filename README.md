@@ -10,7 +10,7 @@ Prerequisites: Docker Desktop with Compose enabled. From the repository root:
 if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
 ```
 
-Edit `backend/.env` and set `JWT_SECRET` to a random value of at least 32 characters, set a private `PRIVILEGED_SIGNUP_CODE`, and optionally set `GROQ_API_KEY`. Without a Groq key, the analysis workflow uses its explicit manual-review fallback. Do not commit `.env` files.
+Edit `backend/.env` and set `JWT_SECRET` to a random value of at least 32 characters, set a private `PRIVILEGED_SIGNUP_CODE`, and optionally set `GROQ_API_KEY` and `OPENWEATHER_API_KEY`. Weather uses OpenWeather One Call API 4.0, which requires its separate One Call subscription; without a key, the dashboard clearly reports that weather is not configured. Without a Groq key, the analysis workflow uses its explicit manual-review fallback. Do not commit `.env` files.
 
 Then start the application:
 
@@ -35,7 +35,7 @@ Reports, plans, decisions, verification results, and dispatch state are stored i
 
 ## Run services separately
 
-For local development without Compose, start a PostGIS-compatible PostgreSQL database, set `DATABASE_URL`, `JWT_SECRET`, `PRIVILEGED_SIGNUP_CODE`, and optionally `GROQ_API_KEY` in `backend/.env`, then:
+For local development without Compose, start a PostGIS-compatible PostgreSQL database, set `DATABASE_URL`, `JWT_SECRET`, `PRIVILEGED_SIGNUP_CODE`, and optionally `GROQ_API_KEY` and `OPENWEATHER_API_KEY` in `backend/.env`, then:
 
 ```powershell
 cd backend

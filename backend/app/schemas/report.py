@@ -16,6 +16,8 @@ class ReportCreate(BaseModel):
     description: str = Field(min_length=1, max_length=5000)
     location: ReportLocationIn
     image_url: Optional[str] = None
+    # Invisible honeypot used to reject basic automated form submissions.
+    website: str = Field(default="", max_length=200)
 
 class ReportOut(BaseModel):
     id: UUID
