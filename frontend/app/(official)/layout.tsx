@@ -80,13 +80,13 @@ export default function OfficialLayout({ children }: { children: ReactNode }) {
 
   const currentPage = pageTitles[pathname] || pageTitles["/dashboard"];
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      <aside className="hidden md:flex w-64 shrink-0 flex-col bg-ink text-white">
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+    <div className="flex h-dvh overflow-hidden bg-slate-50">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-ink text-white md:flex">
+        <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-5 py-5">
           <BrandMark />
           <div><p className="font-bold">Suraksha Setu</p><p className="text-xs text-blue-200">Official workspace</p></div>
         </div>
-        <nav aria-label="Official navigation" className="flex-1 space-y-1 p-3">
+        <nav aria-label="Official navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3">
           {navigation.map((item) => {
             const active = pathname === item.href;
             return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}
@@ -95,14 +95,14 @@ export default function OfficialLayout({ children }: { children: ReactNode }) {
             </Link>;
           })}
         </nav>
-        <div className="border-t border-white/10 px-5 py-4 text-sm text-blue-100">
+        <div className="shrink-0 border-t border-white/10 px-5 py-4 text-sm text-blue-100">
           <span className={`mr-2 inline-block h-2 w-2 rounded-full ${backend === "connected" ? "bg-emerald-400" : backend === "offline" ? "bg-red-400" : "bg-amber-400"}`} />
           Backend: {backend === "connected" ? "connected" : backend === "offline" ? "offline" : "checking"}
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+      <div className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-30 shrink-0 border-b border-slate-200 bg-white">
           <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <div><h1 className="text-xl font-bold text-slate-900">{currentPage.title}</h1><p className="mt-0.5 text-sm text-slate-500">{currentPage.subtitle}</p></div>
             <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export default function OfficialLayout({ children }: { children: ReactNode }) {
               className={`whitespace-nowrap rounded-md px-3 py-2 text-sm ${pathname === item.href ? "bg-ink font-semibold text-white" : "bg-slate-100 text-slate-700"}`}>{item.label}</Link>)}
           </nav>
         </header>
-        <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7">{children}</main>
       </div>
     </div>
   );

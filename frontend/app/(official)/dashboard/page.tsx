@@ -72,7 +72,7 @@ export default function OfficialDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       {error && <div role="alert" className="card flex flex-wrap items-center justify-between gap-3 border-red-200 bg-red-50 p-4 text-sm text-red-800"><span>Could not load dashboard data: {error}</span><button onClick={() => void refresh()} className="font-semibold underline">Try again</button></div>}
 
       <section aria-label="Response summary" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
