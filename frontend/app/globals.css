@@ -5,6 +5,8 @@
 @tailwind utilities;
 
 :root {
+  --font-display: "Arial", "Nirmala UI", sans-serif;
+  --font-body: "Noto Sans", "Nirmala UI", sans-serif;
   --ink: #0E2A3B;
   --river: #1F6883;
   --saffron: #F2A007;

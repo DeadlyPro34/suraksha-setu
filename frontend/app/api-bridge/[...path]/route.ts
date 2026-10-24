@@ -6,6 +6,9 @@ const backendBaseUrl = (
   process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 
+// Incident analysis can take longer than ordinary API calls on a cold start.
+export const maxDuration = 300;
+
 async function forward(request: NextRequest, path: string[]) {
   const target = new URL(`${backendBaseUrl}/${path.map(encodeURIComponent).join("/")}`);
   target.search = request.nextUrl.search;
@@ -23,7 +26,7 @@ async function forward(request: NextRequest, path: string[]) {
       headers,
       body: hasBody ? await request.arrayBuffer() : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(240_000),
     });
     const responseHeaders = new Headers();
     const contentType = response.headers.get("content-type");
