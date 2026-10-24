@@ -1,7 +1,10 @@
 import type { NextRequest } from "next/server";
 
-// This bridge keeps the running local demo connected to its documented host backend.
-const backendBaseUrl = "http://127.0.0.1:5000";
+// In Compose this resolves to the backend service; local development falls back
+// to the host API. Keep this server-side so internal addresses never reach browsers.
+const backendBaseUrl = (
+  process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000"
+).replace(/\/$/, "");
 
 async function forward(request: NextRequest, path: string[]) {
   const target = new URL(`${backendBaseUrl}/${path.map(encodeURIComponent).join("/")}`);
@@ -14,16 +17,24 @@ async function forward(request: NextRequest, path: string[]) {
   }
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
-  const response = await fetch(target, {
-    method: request.method,
-    headers,
-    body: hasBody ? await request.arrayBuffer() : undefined,
-    cache: "no-store",
-  });
-  const responseHeaders = new Headers();
-  const contentType = response.headers.get("content-type");
-  if (contentType) responseHeaders.set("content-type", contentType);
-  return new Response(response.body, { status: response.status, headers: responseHeaders });
+  try {
+    const response = await fetch(target, {
+      method: request.method,
+      headers,
+      body: hasBody ? await request.arrayBuffer() : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    const responseHeaders = new Headers();
+    const contentType = response.headers.get("content-type");
+    if (contentType) responseHeaders.set("content-type", contentType);
+    return new Response(response.body, { status: response.status, headers: responseHeaders });
+  } catch {
+    return Response.json(
+      { detail: "Backend API is unreachable. Check that it is running and BACKEND_INTERNAL_URL points to it." },
+      { status: 502 },
+    );
+  }
 }
 
 type RouteContext = { params: { path: string[] } };

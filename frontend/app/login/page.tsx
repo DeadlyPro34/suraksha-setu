@@ -83,7 +83,7 @@ export default function LoginPage() {
             New here? <Link className="text-blue-700 font-semibold hover:underline" href="/register">Create an account</Link>
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Just need help? <Link className="text-blue-700 font-semibold hover:underline" href="/">Go to the public page</Link>
+            Just need help? <Link className="text-blue-700 font-semibold hover:underline" href="/public">Go to the public page</Link>
           </p>
         </div>
       </section>

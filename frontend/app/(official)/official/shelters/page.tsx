@@ -5,6 +5,7 @@ import { getShelters } from "@/lib/api";
 import dynamic from "next/dynamic";
 import { createShelter, ShelterMutation, updateShelter } from "@/lib/api";
 import { Shelter } from "@/lib/types";
+import { ShelterFreshness } from "@/components/ShelterFreshness";
 
 const ResponseMap = dynamic(() => import("@/components/ResponseMap").then((module) => module.ResponseMap), { ssr: false, loading: () => <div className="h-64 animate-pulse rounded-lg bg-slate-100" /> });
 
@@ -92,7 +93,7 @@ export default function OfficialSheltersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-slate-900">Shelter management</h2><p className="mt-1 text-sm text-slate-600">Add a shelter or update its location, capacity, facilities, and operating status.</p></div><button type="button" onClick={openCreateForm} className="rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white">Add shelter</button></div>
       {formOpen && <form onSubmit={(event) => void saveShelter(event)} className="card space-y-4 border-sky-200 p-5 sm:p-6"><div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-bold text-slate-900">{editingId ? "Edit shelter" : "Register a shelter"}</h3><p className="mt-1 text-sm text-slate-600">Select a point on the map or enter its coordinates.</p></div><button type="button" onClick={() => setFormOpen(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700">Close</button></div>
         {formError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{formError}</p>}
@@ -134,12 +135,13 @@ export default function OfficialSheltersPage() {
         <div className="mt-5 flex items-end justify-between gap-3"><p><span className="text-2xl font-bold text-slate-900">{shelter.available_capacity}</span><span className="ml-2 text-sm text-slate-600">places available</span></p><p className="text-sm font-semibold text-slate-700">{shelter.available_percentage}% free</p></div>
         <div className="mt-2"><CapacityBar percentage={shelter.available_percentage} /></div>
         <p className="mt-2 text-xs text-slate-500">Occupancy: {shelter.current_occupancy} of {shelter.capacity}</p>
+        <ShelterFreshness updatedAt={shelter.updated_at} />
         <div className="mt-4 flex flex-wrap gap-2">
           {shelter.has_electricity && <span className="badge badge-info">Electricity</span>}
           {shelter.has_medical && <span className="badge badge-info">Medical support</span>}
           {!shelter.has_electricity && !shelter.has_medical && <span className="text-xs text-slate-400">No additional facilities listed</span>}
         </div>
-        <div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => openEditForm(shelter)} className="inline-flex rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Edit shelter</button><a href={`https://www.google.com/maps/dir/?api=1&destination=${shelter.lat},${shelter.lon}`} target="_blank" rel="noreferrer" className="inline-flex rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50">Open directions ↗</a></div>
+        <div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => openEditForm(shelter)} className="inline-flex rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Edit shelter</button><a href={`/map?lat=${shelter.lat}&lon=${shelter.lon}`} className="inline-flex rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50">View on response map</a></div>
       </article>)}</div>}
       {!loading && !error && shelters.length > 0 && <p className="text-xs text-slate-500">{medicalCount} {medicalCount === 1 ? "shelter has" : "shelters have"} medical support listed. Capacity figures use the latest data recorded in the system.</p>}
     </div>
