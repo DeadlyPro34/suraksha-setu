@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-For deployment, set `DATABASE_URL`, `JWT_SECRET`, and `PRIVILEGED_SIGNUP_CODE` on the backend service. On Vercel, use the Supabase **Transaction pooler** connection string (port `6543`) for runtime traffic; serverless functions should not hold session-mode connections open. The backend detects Supabase's shared pooler URL, switches a `5432` runtime URL to transaction mode, and uses SQLAlchemy `NullPool` so Supavisor handles connection pooling. To enable photo and video attachments, create a **private** Supabase Storage bucket named `incident-media`, then set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_MEDIA_BUCKET=incident-media` on the backend service. Configure the bucket's file size and MIME type limits to allow the media types accepted by the report form. Keep the service role key backend-only; uploads use short-lived signed URLs so file bytes go directly from the browser to Supabase Storage.
+For deployment, set `DATABASE_URL`, `JWT_SECRET`, and `PRIVILEGED_SIGNUP_CODE` on the Vercel backend service. Configure shared Redis rate-limit storage with `RATE_LIMIT_STORAGE_URI` (for example, an Upstash Redis `rediss://` URL) on the Vercel backend service; without it, rate limits use per-process memory and will not be shared across instances. Set the same random `RATE_LIMIT_PROXY_SECRET` for both Vercel services (frontend and backend) so the API bridge can sign Vercel's client-IP header; without it, requests are safely keyed by the proxy's connection IP. Use the Supabase **Transaction pooler** connection string (port `6543`) for backend runtime traffic; serverless functions should not hold session-mode connections open. The backend detects Supabase's shared pooler URL, switches a `5432` runtime URL to transaction mode, and uses SQLAlchemy `NullPool` so Supavisor handles connection pooling. To enable photo and video attachments, create a **private** Supabase Storage bucket named `incident-media`, then set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_MEDIA_BUCKET=incident-media` on the Vercel backend service. Configure the bucket's file size and MIME type limits to allow the media types accepted by the report form. Keep the service role key backend-only; uploads use short-lived signed URLs so file bytes go directly from the browser to Supabase Storage.
 
 Next.js proxies browser API calls to `http://127.0.0.1:5000` by default. Set `BACKEND_INTERNAL_URL` if the API is at another address.
 
@@ -64,6 +64,43 @@ Next.js proxies browser API calls to `http://127.0.0.1:5000` by default. Set `BA
 - Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS.
 - API: FastAPI, SQLAlchemy, Alembic, PostgreSQL/PostGIS.
 - Analysis: domain-specific Python agents coordinated through LangChain's Groq integration, with validated structured output and a deterministic manual-review fallback.
+
+## Mobile app
+
+The Android and iOS apps use Capacitor to display the deployed Suraksha Setu web app (`https://suraksha-setu-xi.vercel.app`). This keeps the app's web interface current when a new frontend deployment goes live. Changes to native project settings, icons, or native plugins still require a new app build and installation.
+
+Mobile workspaces use a fixed bottom navigation bar for field officers and volunteers, with spacing for phone safe areas. Supply delivery progress switches to a two-column layout on phones and a five-step row on wide screens.
+
+### Android
+
+Prerequisites: Node.js, Android Studio, and a Java 17 JDK. From `frontend/`:
+
+```powershell
+npm install
+npm run android:sync
+npm run android:open
+```
+
+To build a debug APK on Windows:
+
+```powershell
+npm run android:apk
+```
+
+The debug APK is written to `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+
+### iOS
+
+Building or signing an iOS app requires macOS with Xcode and the required Apple signing setup. From `frontend/` on a Mac:
+
+```bash
+npm install
+npm run ios:sync
+cd ios/App && pod install
+open App.xcworkspace
+```
+
+Select the App target and a valid Apple Developer Team in Xcode to run on a device or archive a signed app. A Windows machine can prepare and share the iOS project ZIP, but cannot produce a signed IPA.
 
 ## Notes
 
