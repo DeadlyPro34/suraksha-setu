@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { homeForRole } from "@/lib/auth";
 import { saveAccessToken, signupUser } from "@/lib/api";
 import { User } from "@/lib/types";
-
+import { BrandMark, Waves } from "@/components/Brand";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -56,55 +56,155 @@ export default function RegisterPage() {
     }
   };
 
+  const field = "w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none";
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <section className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-lg border border-slate-200">
-        <div className="text-center mb-7">
-          <div className="text-4xl mb-2">🛡️</div>
-          <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
-          <p className="mt-2 text-sm text-slate-500">Register for Suraksha Setu</p>
+    <main className="min-h-screen flex flex-col lg:flex-row">
+      <section className="gradient-primary text-white lg:w-[46%] flex flex-col justify-between">
+        <div className="p-6 lg:p-12">
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <BrandMark />
+            <span className="font-display text-lg font-bold">Suraksha Setu</span>
+          </Link>
+          <h1 className="font-display text-3xl lg:text-5xl font-extrabold leading-[1.08] mt-8 lg:mt-24 max-w-md">
+            Coordinate the response. Keep people safe.
+          </h1>
+          <p className="mt-4 text-blue-100 max-w-sm">
+            For officials, field teams and volunteers managing floods, shelters and supplies.
+          </p>
         </div>
+        <Waves fill="#FFFFFF" className="hidden lg:block" />
+      </section>
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-            <input id="name" required minLength={2} maxLength={200} value={name} onChange={(event) => setName(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="name" />
-          </div>
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-            <input id="phone" type="tel" inputMode="numeric" required minLength={10} maxLength={10} pattern="[0-9]{10}" title="Enter 10 digits without +91." placeholder="98765 43210" value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="tel" />
-            <p className="mt-1 text-xs text-slate-500">Enter 10 digits without +91 ({phone.length}/10).</p>
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input id="password" type="password" required minLength={8} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="new-password" />
-            <p className="mt-1 text-xs text-slate-500">Use at least 8 characters.</p>
-          </div>
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">Account role</label>
-            <select id="role" value={role} onChange={(event) => setRole(event.target.value as User["role"])} className="w-full px-4 py-3 border border-slate-200 rounded-xl">
-              <option value="citizen">Citizen</option>
-              <option value="volunteer">Volunteer</option>
-              <option value="field_officer">Field officer</option>
-              <option value="official">Official</option>
-            </select>
-          </div>
-          {role !== "citizen" && (
+      <section className="flex-1 flex items-center justify-center p-6 lg:p-12 py-10 bg-white">
+        <div className="w-full max-w-sm animate-fade-in my-auto">
+          <h2 className="font-display text-2xl font-bold text-slate-900">Create account</h2>
+          <p className="text-slate-600 mt-1 mb-7">Join Suraksha Setu to coordinate or request assistance.</p>
+
+          <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <label htmlFor="invite" className="block text-sm font-medium text-slate-700 mb-1">Role invite code</label>
-              <input id="invite" type="password" required value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl" autoComplete="off" />
-              <p className="mt-1 text-xs text-slate-500">Volunteer, field officer, and official accounts require an administrator invite code.</p>
+              <label htmlFor="name" className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Full name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                minLength={2}
+                maxLength={200}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g. Rahul Sharma"
+                className={field}
+                autoComplete="name"
+              />
             </div>
-          )}
 
-          {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full py-3 gradient-primary text-white font-semibold rounded-xl disabled:opacity-50">
-            {loading ? "Creating account…" : "Create Account"}
-          </button>
-        </form>
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Already registered? <Link className="text-blue-600 font-medium hover:underline" href="/login">Sign in</Link>
-        </p>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Phone number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                required
+                minLength={10}
+                maxLength={10}
+                pattern="[0-9]{10}"
+                title="Enter exactly 10 digits without +91."
+                value={phone}
+                onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="e.g. 9876543210"
+                className={field}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="At least 8 characters"
+                className={field}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="role" className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Account role
+              </label>
+              <select
+                id="role"
+                value={role}
+                onChange={(event) => setRole(event.target.value as User["role"])}
+                className={`${field} cursor-pointer`}
+              >
+                <option value="citizen">Citizen</option>
+                <option value="volunteer">Volunteer</option>
+                <option value="field_officer">Field officer</option>
+                <option value="official">Official</option>
+              </select>
+            </div>
+
+            {role !== "citizen" && (
+              <div>
+                <label htmlFor="invite" className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Role invite code
+                </label>
+                <input
+                  id="invite"
+                  type="password"
+                  required
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value)}
+                  placeholder="Enter administrator invite code"
+                  className={field}
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Volunteer, field officer, and official accounts require an invite code.
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-ink text-white font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-sm text-slate-600">
+            Already have an account?{" "}
+            <Link className="text-blue-700 font-semibold hover:underline" href="/login">
+              Sign in
+            </Link>
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Just need help?{" "}
+            <Link className="text-blue-700 font-semibold hover:underline" href="/public">
+              Go to the public page
+            </Link>
+          </p>
+        </div>
       </section>
     </main>
   );
